@@ -5,3 +5,6 @@ dist/
 .gemini/
 brain/
 *.log
+demolition-game/
+全統AI/
+sukedachi_search_results.csv
