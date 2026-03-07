@@ -301,18 +301,20 @@ class Game {
         this.ctx.textAlign = 'center';
         this.ctx.fillText(text, CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2);
         
-        // リスタートボタンの描画
-        const btnW = 200;
-        const btnH = 50;
-        const btnX = CANVAS_WIDTH / 2 - btnW / 2;
-        const btnY = CANVAS_HEIGHT / 2 + 60;
-        
-        this.ctx.fillStyle = color;
-        this.ctx.fillRect(btnX, btnY, btnW, btnH);
-        
-        this.ctx.fillStyle = '#fff';
-        this.ctx.font = 'bold 20px "Segoe UI"';
-        this.ctx.fillText('RESTART', CANVAS_WIDTH / 2, btnY + 33);
+        // リスタートボタンの描画（ゲーム終了時のみ）
+        if (this.gameOver || this.gameWin) {
+            const btnW = 200;
+            const btnH = 50;
+            const btnX = CANVAS_WIDTH / 2 - btnW / 2;
+            const btnY = CANVAS_HEIGHT / 2 + 60;
+            
+            this.ctx.fillStyle = color;
+            this.ctx.fillRect(btnX, btnY, btnW, btnH);
+            
+            this.ctx.fillStyle = '#fff';
+            this.ctx.font = 'bold 20px "Segoe UI"';
+            this.ctx.fillText('RESTART', CANVAS_WIDTH / 2, btnY + 33);
+        }
     }
 
     drawSpecialGauge() {
