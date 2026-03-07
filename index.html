@@ -17,9 +17,13 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
         canvas {
+            max-width: 100vw;
+            max-height: 100vh;
+            object-fit: contain;
             border: 4px solid #333;
             box-shadow: 0 0 20px rgba(0,0,0,0.5);
             background-color: #000;
+            touch-action: none; /* スマホでのスクロールやズームを防止 */
         }
     </style>
 </head>

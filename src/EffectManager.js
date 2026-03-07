@@ -2,16 +2,19 @@ import { Particle } from './Particle.js';
 import { CANVAS_HEIGHT } from './Constants.js';
 
 class Laser {
-    constructor(x, width) {
+    constructor(x, width, startY) {
         this.x = x;
         this.width = width;
+        this.startY = startY;
         this.life = 1.0;
-        this.decay = 0.05;
+        this.decay = 0.04;
         this.active = true;
+        this.pulse = 0;
     }
 
     update() {
         this.life -= this.decay;
+        this.pulse += 0.5;
         if (this.life <= 0) {
             this.life = 0;
             this.active = false;
@@ -22,22 +25,44 @@ class Laser {
         ctx.save();
         ctx.globalAlpha = this.life;
         
-        // メインの太い線
-        const grad = ctx.createLinearGradient(this.x - this.width/2, 0, this.x + this.width/2, 0);
-        grad.addColorStop(0, 'rgba(0, 255, 255, 0)');
-        grad.addColorStop(0.5, 'rgba(255, 255, 255, 1)');
-        grad.addColorStop(1, 'rgba(0, 255, 255, 0)');
+        // パルスによる幅の変動
+        const pulseWidth = this.width * (0.8 + Math.sin(this.pulse) * 0.2);
         
-        ctx.fillStyle = grad;
-        ctx.fillRect(this.x - this.width/2, 0, this.width, CANVAS_HEIGHT);
-        
-        // 外側の光彩
-        ctx.shadowBlur = 20;
+        // 外側の大きな光彩
+        ctx.shadowBlur = 30;
         ctx.shadowColor = '#00ffff';
-        ctx.strokeStyle = '#e0f7fa';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(this.x - this.width/4, 0, this.width/2, CANVAS_HEIGHT);
         
+        // 1. 最外周の淡い光
+        const gradOuter = ctx.createLinearGradient(this.x - pulseWidth, 0, this.x + pulseWidth, 0);
+        gradOuter.addColorStop(0, 'rgba(0, 255, 255, 0)');
+        gradOuter.addColorStop(0.5, 'rgba(0, 255, 255, 0.3)');
+        gradOuter.addColorStop(1, 'rgba(0, 255, 255, 0)');
+        ctx.fillStyle = gradOuter;
+        ctx.fillRect(this.x - pulseWidth, 0, pulseWidth * 2, this.startY);
+
+        // 2. メインの光線
+        const gradMain = ctx.createLinearGradient(this.x - pulseWidth/2, 0, this.x + pulseWidth/2, 0);
+        gradMain.addColorStop(0, 'rgba(0, 255, 255, 0.2)');
+        gradMain.addColorStop(0.5, 'rgba(255, 255, 255, 0.9)');
+        gradMain.addColorStop(1, 'rgba(0, 255, 255, 0.2)');
+        ctx.fillStyle = gradMain;
+        ctx.fillRect(this.x - pulseWidth/2, 0, pulseWidth, this.startY);
+
+        // 3. 中心部の鋭い芯（エネルギーの核）
+        const coreWidth = pulseWidth * 0.2;
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = '#ffffff';
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(this.x - coreWidth/2, 0, coreWidth, this.startY);
+        
+        // 根元（パドルとの接点）のスパーク
+        if (Math.random() > 0.5) {
+            ctx.beginPath();
+            ctx.arc(this.x, this.startY, pulseWidth, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+            ctx.fill();
+        }
+
         ctx.restore();
     }
 }
@@ -101,8 +126,8 @@ export class EffectManager {
         this.texts.push(new DamageText(x, y, text, comboCount));
     }
 
-    createLaser(x, width) {
-        this.lasers.push(new Laser(x, width));
+    createLaser(x, width, startY) {
+        this.lasers.push(new Laser(x, width, startY));
     }
 
     update() {

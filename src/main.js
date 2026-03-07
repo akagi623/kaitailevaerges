@@ -52,14 +52,45 @@ class Game {
     }
 
     setupStartListener() {
-        const startHandler = () => {
+        const startHandler = (e) => {
             if (!this.gameStarted) {
                 this.gameStarted = true;
                 this.bgm.play().catch(e => console.error("Audio playback failed:", e));
                 this.canvas.removeEventListener('click', startHandler);
+                this.canvas.removeEventListener('touchstart', startHandler);
+            } else if (this.gameStarted && !this.gameOver && !this.gameWin) {
+                // ゲーム実行中のクリック/タップ処理
+                const rect = this.canvas.getBoundingClientRect();
+                const scaleX = CANVAS_WIDTH / rect.width;
+                const scaleY = CANVAS_HEIGHT / rect.height;
+                
+                const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+                const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+                
+                if (clientX !== undefined && clientY !== undefined) {
+                    const canvasX = (clientX - rect.left) * scaleX;
+                    const canvasY = (clientY - rect.top) * scaleY;
+                    
+                    // ゲージ付近をタップしたらレーザー発射
+                    // 判定を少し広めにする（右端から60px以内かつゲージの高さ付近）
+                    if (canvasX > CANVAS_WIDTH - 60 && canvasY > 80 && canvasY < 320) {
+                        this.fireLaser();
+                    }
+                }
             }
         };
+        
         this.canvas.addEventListener('click', startHandler);
+        this.canvas.addEventListener('touchstart', (e) => {
+            startHandler(e);
+            // パドル操作と被らないように、上の方のタップならpreventDefaultする
+            const rect = this.canvas.getBoundingClientRect();
+            const clientY = e.touches[0].clientY;
+            const canvasY = (clientY - rect.top) * (CANVAS_HEIGHT / rect.height);
+            if (canvasY < CANVAS_HEIGHT - 100) {
+                e.preventDefault();
+            }
+        }, { passive: false });
 
         // スペースキーで必殺技
         window.addEventListener('keydown', (e) => {
@@ -305,7 +336,7 @@ class Game {
         const laserWidth = 30;
 
         // レーザーエフェクト
-        this.effectManager.createLaser(laserX, laserWidth);
+        this.effectManager.createLaser(laserX, laserWidth, this.paddle.y);
         
         // ヒット判定
         const hits = this.levelManager.checkLaserCollision(laserX, laserWidth, LASER_DAMAGE);

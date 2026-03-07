@@ -15,6 +15,8 @@ export class Paddle {
     }
 
     setupEventListeners() {
+        const canvas = document.getElementById('gameCanvas');
+
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Right' || e.key === 'ArrowRight') this.rightPressed = true;
             if (e.key === 'Left' || e.key === 'ArrowLeft') this.leftPressed = true;
@@ -23,12 +25,34 @@ export class Paddle {
             if (e.key === 'Right' || e.key === 'ArrowRight') this.rightPressed = false;
             if (e.key === 'Left' || e.key === 'ArrowLeft') this.leftPressed = false;
         });
-        document.addEventListener('mousemove', (e) => {
-            const relativeX = e.clientX - document.body.getBoundingClientRect().left - (window.innerWidth - CANVAS_WIDTH) / 2;
+
+        // マウス移動（キャンバスのレスポンシブ対応版）
+        const handleMove = (clientX) => {
+            const rect = canvas.getBoundingClientRect();
+            // 画面上の位置をキャンバス内部の座標（0-800）に変換
+            const scaleX = CANVAS_WIDTH / rect.width;
+            const relativeX = (clientX - rect.left) * scaleX;
+            
             if (relativeX > 0 && relativeX < CANVAS_WIDTH) {
                 this.x = relativeX - this.width / 2;
             }
+        };
+
+        document.addEventListener('mousemove', (e) => {
+            handleMove(e.clientX);
         });
+
+        // タッチ操作への対応
+        document.addEventListener('touchstart', (e) => {
+            if (e.touches.length > 0) handleMove(e.touches[0].clientX);
+        }, { passive: false });
+
+        document.addEventListener('touchmove', (e) => {
+            if (e.touches.length > 0) {
+                handleMove(e.touches[0].clientX);
+                e.preventDefault(); // スクロール防止
+            }
+        }, { passive: false });
     }
 
     update() {
