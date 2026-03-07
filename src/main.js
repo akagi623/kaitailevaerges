@@ -166,7 +166,7 @@ class Game {
                 }
             }
             
-            if (this.levelManager.areAllBricksCleared()) {
+            if (this.levelManager.areAllBricksCleared() && !this.gameWin) {
                 this.gameWin = true;
                 this.winSE.play().catch(e => console.error("Win SE failed:", e));
                 this.fadeOutBGM();
@@ -227,7 +227,7 @@ class Game {
         if (this.ball.y + this.ball.radius > CANVAS_HEIGHT) {
             this.lives--;
             this.combo = 0; // コンボリセット（lastComboは保持される）
-            if (this.lives <= 0) {
+            if (this.lives <= 0 && !this.gameOver) {
                 this.gameOver = true;
                 this.loseSE.play().catch(e => console.error("Lose SE failed:", e));
                 this.fadeOutBGM();
@@ -395,8 +395,8 @@ class Game {
     }
 
     playHitSE() {
-        // 新しいAudioオブジェクトを作成して再生（ベースパス対応）
-        const se = new Audio('soundeffect/cracker_3.mp3');
+        // 音声を複製して再生（これで複数が重なって鳴るようになる）
+        const se = this.hitSE.cloneNode(true);
         se.volume = 0.6;
         se.play().catch(e => console.error("SE playback failed:", e));
     }
