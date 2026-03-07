@@ -34,17 +34,17 @@ class Game {
         this.specialGauge = 0; // 必殺技ゲージ
         this.lastLaserTime = 0; // 前回のレーザー発射時刻
 
-        // BGMの設定
-        this.bgm = new Audio('/BURNING ADRENALINE.mp3');
+        // BGMの設定（ベースパス対応のため相対パスに修正）
+        this.bgm = new Audio('BURNING ADRENALINE.mp3');
         this.bgm.loop = true;
         this.bgm.volume = 0.5;
 
         // SEの設定
-        this.hitSE = new Audio('/soundeffect/cracker_3.mp3');
+        this.hitSE = new Audio('soundeffect/cracker_3.mp3');
         this.hitSE.volume = 0.6;
-        this.winSE = new Audio('/soundeffect/winse.mp3');
+        this.winSE = new Audio('soundeffect/winse.mp3');
         this.winSE.volume = 0.5;
-        this.loseSE = new Audio('/soundeffect/losese.mp3');
+        this.loseSE = new Audio('soundeffect/losese.mp3');
         this.loseSE.volume = 0.5;
 
         this.setupStartListener();
@@ -71,10 +71,27 @@ class Game {
                     const canvasX = (clientX - rect.left) * scaleX;
                     const canvasY = (clientY - rect.top) * scaleY;
                     
-                    // ゲージ付近をタップしたらレーザー発射
-                    // 判定を少し広めにする（右端から60px以内かつゲージの高さ付近）
-                    if (canvasX > CANVAS_WIDTH - 60 && canvasY > 80 && canvasY < 320) {
+                    // 必殺技ボタン判定（右下：x > 660, y > 540）
+                    if (canvasX > CANVAS_WIDTH - 140 && canvasY > CANVAS_HEIGHT - 60) {
                         this.fireLaser();
+                    }
+                }
+            } else if (this.gameOver || this.gameWin) {
+                // リスタートボタン判定
+                const rect = this.canvas.getBoundingClientRect();
+                const scaleX = CANVAS_WIDTH / rect.width;
+                const scaleY = CANVAS_HEIGHT / rect.height;
+                const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+                const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+                
+                if (clientX !== undefined && clientY !== undefined) {
+                    const canvasX = (clientX - rect.left) * scaleX;
+                    const canvasY = (clientY - rect.top) * scaleY;
+                    
+                    // 中央のリスタートボタン付近
+                    if (canvasX > CANVAS_WIDTH / 2 - 100 && canvasX < CANVAS_WIDTH / 2 + 100 &&
+                        canvasY > CANVAS_HEIGHT / 2 + 60 && canvasY < CANVAS_HEIGHT / 2 + 110) {
+                        location.reload(); // シンプルにリロードしてリスタート
                     }
                 }
             }
@@ -284,47 +301,56 @@ class Game {
         this.ctx.textAlign = 'center';
         this.ctx.fillText(text, CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2);
         
+        // リスタートボタンの描画
+        const btnW = 200;
+        const btnH = 50;
+        const btnX = CANVAS_WIDTH / 2 - btnW / 2;
+        const btnY = CANVAS_HEIGHT / 2 + 60;
+        
+        this.ctx.fillStyle = color;
+        this.ctx.fillRect(btnX, btnY, btnW, btnH);
+        
         this.ctx.fillStyle = '#fff';
-        this.ctx.font = '20px "Segoe UI"';
-        this.ctx.fillText('Press F5 to Restart', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 50);
+        this.ctx.font = 'bold 20px "Segoe UI"';
+        this.ctx.fillText('RESTART', CANVAS_WIDTH / 2, btnY + 33);
     }
 
     drawSpecialGauge() {
-        const x = CANVAS_WIDTH - 30;
-        const y = 100;
-        const width = 15;
-        const height = 200;
-        const fillHeight = (this.specialGauge / SPECIAL_GAUGE_MAX) * height;
+        const width = 120;
+        const height = 40;
+        const x = CANVAS_WIDTH - width - 20;
+        const y = CANVAS_HEIGHT - height - 20;
+        const fillWidth = (this.specialGauge / SPECIAL_GAUGE_MAX) * width;
 
-        // 背景
-        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
-        this.ctx.fillRect(x, y, width, height);
-        
-        // ゲージの中身
-        const color = this.specialGauge >= SPECIAL_GAUGE_MAX ? '#00ffff' : '#ff5252';
-        this.ctx.fillStyle = color;
-        this.ctx.fillRect(x, y + (height - fillHeight), width, fillHeight);
-        
-        // 枠線
+        // ボタンの背景
+        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
         this.ctx.strokeStyle = '#fff';
         this.ctx.lineWidth = 2;
-        this.ctx.strokeRect(x, y, width, height);
+        this.ctx.beginPath();
+        this.ctx.roundRect(x, y, width, height, 5);
+        this.ctx.fill();
+        this.ctx.stroke();
+        
+        // ゲージの中身（水平バー）
+        const color = this.specialGauge >= SPECIAL_GAUGE_MAX ? '#00ffff' : '#ff5252';
+        if (this.specialGauge > 0) {
+            this.ctx.fillStyle = color;
+            this.ctx.beginPath();
+            this.ctx.roundRect(x + 2, y + 2, (width - 4) * (this.specialGauge / SPECIAL_GAUGE_MAX), height - 4, 3);
+            this.ctx.fill();
+        }
 
         // ラベル
-        this.ctx.save();
-        this.ctx.translate(x - 10, y + height / 2);
-        this.ctx.rotate(-Math.PI / 2);
+        this.ctx.fillStyle = '#fff';
+        this.ctx.font = 'bold 16px "Segoe UI"';
         this.ctx.textAlign = 'center';
-        this.ctx.font = 'bold 14px "Segoe UI"';
-        this.ctx.fillStyle = color;
-        this.ctx.fillText('SPECIAL', 0, 0);
-        this.ctx.restore();
+        this.ctx.fillText(this.specialGauge >= SPECIAL_GAUGE_MAX ? 'FIRE!' : 'SPECIAL', x + width / 2, y + height / 2 + 6);
 
         if (this.specialGauge >= SPECIAL_GAUGE_MAX) {
-            this.ctx.fillStyle = '#00ffff';
-            this.ctx.font = 'bold 12px "Segoe UI"';
-            this.ctx.textAlign = 'right';
-            this.ctx.fillText('READY [SPACE]', x - 5, y + height + 20);
+            // 発光エフェクト（外枠が動く）
+            this.ctx.strokeStyle = `rgba(0, 255, 255, ${0.5 + Math.sin(Date.now() * 0.01) * 0.5})`;
+            this.ctx.lineWidth = 4;
+            this.ctx.strokeRect(x - 2, y - 2, width + 4, height + 4);
         }
     }
 
@@ -367,8 +393,8 @@ class Game {
     }
 
     playHitSE() {
-        // 新しいAudioオブジェクトを作成して再生（確実に重複再生可能にする）
-        const se = new Audio('/soundeffect/cracker_3.mp3');
+        // 新しいAudioオブジェクトを作成して再生（ベースパス対応）
+        const se = new Audio('soundeffect/cracker_3.mp3');
         se.volume = 0.6;
         se.play().catch(e => console.error("SE playback failed:", e));
     }
