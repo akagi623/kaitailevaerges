@@ -236,6 +236,18 @@ class Game {
             this.paddle.speed = this.player.speed;
         }
 
+        // チュートリアルの無効化（池袋以外）
+        if (stageId !== STAGE_ID.IKEBUKURO) {
+            this.hasShownIntro = true;
+            this.hasShownRespawn = true;
+            this.hasShownIssue = true;
+        } else {
+            // 池袋の場合は（リプレイ等のため）フラグをリセット
+            this.hasShownIntro = false;
+            this.hasShownRespawn = false;
+            this.hasShownIssue = false;
+        }
+
         this.levelManager.init(stageId);
         this.gameState = GAME_STATE.PLAYING;
         this.gameStarted = true;
