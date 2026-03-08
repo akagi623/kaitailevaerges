@@ -41,10 +41,55 @@ let currentCharacter = CHARACTERS[0];
 let currentStage = STAGES[0];
 let totalMoney = 0;
 
-// BGM Initializer
-const bgm = new Audio('BURNING ADRENALINE.mp3');
-bgm.loop = true;
-bgm.volume = 0.4;
+// Web Audio API for BGM (to support iOS volume control)
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+let bgmBuffer = null;
+let bgmSource = null;
+let bgmGain = audioCtx.createGain();
+bgmGain.connect(audioCtx.destination);
+bgmGain.gain.value = 0.4;
+let isBgmPlaying = false;
+let bgmStartTime = 0;
+let bgmPauseTime = 0;
+
+// Load BGM
+fetch('BURNING ADRENALINE.mp3')
+    .then(response => response.arrayBuffer())
+    .then(arrayBuffer => audioCtx.decodeAudioData(arrayBuffer))
+    .then(audioBuffer => {
+        bgmBuffer = audioBuffer;
+    })
+    .catch(e => console.error("Failed to load BGM:", e));
+
+function playBGM() {
+    if (!bgmBuffer || isBgmPlaying) return;
+    if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+    }
+    bgmSource = audioCtx.createBufferSource();
+    bgmSource.buffer = bgmBuffer;
+    bgmSource.loop = true;
+    bgmSource.connect(bgmGain);
+    
+    // Calculate offset if it was paused
+    const offset = bgmPauseTime % bgmBuffer.duration;
+    bgmSource.start(0, offset);
+    bgmStartTime = audioCtx.currentTime - offset;
+    isBgmPlaying = true;
+}
+
+function pauseBGM() {
+    if (isBgmPlaying && bgmSource) {
+        bgmSource.stop();
+        bgmPauseTime = audioCtx.currentTime - bgmStartTime;
+        isBgmPlaying = false;
+    }
+}
+
+function resetBGM() {
+    pauseBGM();
+    bgmPauseTime = 0;
+}
 
 const engine = new GameEngine(canvas, (type, data) => {
     if (type === 'update') {
@@ -101,12 +146,12 @@ ui.startBtn.addEventListener('click', () => {
     engine.startLevel(currentStage, currentCharacter);
     
     // Play BGM on first interaction
-    bgm.play().catch(e => console.log("BGM play failed, waiting for interaction", e));
+    playBGM();
 });
 
 ui.stopBtn.addEventListener('click', () => {
     engine.isPaused = true;
-    bgm.volume = 0.025;
+    bgmGain.gain.exponentialRampToValueAtTime(0.025, audioCtx.currentTime + 0.1); // スムーズに下げる
     
     // Update pause stats
     ui.pauseCharName.textContent = currentCharacter.name;
@@ -118,7 +163,7 @@ ui.stopBtn.addEventListener('click', () => {
 
 ui.resumeBtn.addEventListener('click', () => {
     engine.isPaused = false;
-    bgm.volume = 0.4;
+    bgmGain.gain.exponentialRampToValueAtTime(0.4, audioCtx.currentTime + 0.1); // スムーズに戻す
     showScreen({ classList: { add: () => {}, remove: () => {} } }); // Hide modals but don't show any new one
     ui.pauseScreen.classList.add('hidden');
 });
@@ -126,8 +171,7 @@ ui.resumeBtn.addEventListener('click', () => {
 ui.pauseTopBtn.addEventListener('click', () => {
     engine.isPaused = false;
     engine.gameState = 'menu';
-    bgm.pause();
-    bgm.currentTime = 0;
+    resetBGM();
     showScreen(ui.startScreen);
     ui.stopBtn.classList.add('hidden');
     ui.retireBtn.classList.add('hidden');
@@ -149,8 +193,7 @@ ui.backToMainBtn.addEventListener('click', () => showScreen(ui.startScreen));
 ui.retireBtn.addEventListener('click', () => {
     if (confirm('現場から撤収しますか？ (現在のスコアは破棄されます)')) {
         engine.gameState = 'menu';
-        bgm.pause();
-        bgm.currentTime = 0;
+        resetBGM();
         showScreen(ui.startScreen);
         ui.stopBtn.classList.add('hidden');
         ui.retireBtn.classList.add('hidden');
@@ -158,13 +201,11 @@ ui.retireBtn.addEventListener('click', () => {
 });
 
 document.getElementById('backToTopBtn').addEventListener('click', () => {
-    bgm.pause();
-    bgm.currentTime = 0;
+    resetBGM();
     showScreen(ui.startScreen);
 });
 document.getElementById('gameOverTopBtn').addEventListener('click', () => {
-    bgm.pause();
-    bgm.currentTime = 0;
+    resetBGM();
     showScreen(ui.startScreen);
 });
 document.getElementById('restartBtn').addEventListener('click', () => {
