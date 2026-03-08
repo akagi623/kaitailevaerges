@@ -40,6 +40,8 @@ class Game {
         this.hitSEBuffer = null; // ヒットSE
         this.winSEBuffer = null; // クリアSE
         this.loseSEBuffer = null; // ゲームオーバーSE
+        this.laserSEBuffer = null; // 必殺技発射SE
+        this.paddleStretchSEBuffer = null; // パドル伸長アイテムSE
 
         // BGM（長い曲は streaming の HTMLAudio で再生）
         this.bgm = new Audio('BURNING ADRENALINE.mp3');
@@ -66,6 +68,8 @@ class Game {
                 loadSE('soundeffect/cracker_3.mp3').then(b => { this.hitSEBuffer = b; }).catch(e => console.error('Hit SE load failed:', e));
                 loadSE('soundeffect/winse.mp3').then(b => { this.winSEBuffer = b; }).catch(e => console.error('Win SE load failed:', e));
                 loadSE('soundeffect/losese.mp3').then(b => { this.loseSEBuffer = b; }).catch(e => console.error('Lose SE load failed:', e));
+                loadSE('soundeffect/laser.mp3').then(b => { this.laserSEBuffer = b; }).catch(e => console.error('Laser SE load failed:', e));
+                loadSE('soundeffect/padolstrech.mp3').then(b => { this.paddleStretchSEBuffer = b; }).catch(e => console.error('Paddle SE load failed:', e));
 
                 this.bgm.play().catch(e => console.error("Audio playback failed:", e));
                 this.canvas.removeEventListener('click', startHandler);
@@ -199,6 +203,7 @@ class Game {
                 // アイテム効果
                 if (item.type === ITEM_TYPES.EXPAND) {
                     this.paddle.width += 20;
+                    this.playWebAudioSE(this.paddleStretchSEBuffer, 0.7);
                 }
                 item.active = false;
             }
@@ -384,6 +389,9 @@ class Game {
         this.specialGauge = 0;
         const laserX = this.paddle.x + this.paddle.width / 2;
         const laserWidth = 30;
+
+        // レーザーSE
+        this.playWebAudioSE(this.laserSEBuffer, 0.7);
 
         // レーザーエフェクト
         this.effectManager.createLaser(laserX, laserWidth, this.paddle.y);
