@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Demolition Site - Advanced Demolition</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./src/style.css">
+</head>
+
+<body>
+    <div id="app">
+        <div class="game-container">
+            <canvas id="gameCanvas"></canvas>
+
+            <div class="overlay" id="uiOverlay">
+                <div class="hud">
+                    <div class="hud-top">
+                        <div class="stat">FUND: ¥<span id="moneyValue">0</span></div>
+                        <div class="stat">SCORE: <span id="scoreValue">0000</span></div>
+                    </div>
+                    <div class="hud-middle">
+                        <div class="stat">TIME: <span id="timerValue">00:00</span></div>
+                        <div id="comboContainer" class="stat hidden">COMBO x<span id="comboValue">1</span></div>
+                    </div>
+                    <div class="hud-bottom">
+                        <div class="stat">LIVES: <span id="livesValue">3</span></div>
+                        <div class="hud-actions">
+                            <button id="stopBtn" class="mini-btn hidden">STOP</button>
+                            <button id="retireBtn" class="mini-btn hidden">RETIRE</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Start/MainMenu Screen -->
+                <div id="startScreen" class="modal">
+                    <div class="logo">
+                        <h1>DEMOLITION <span>SITE</span></h1>
+                        <div class="subtitle">ADVANCED DESTRUCTION SYSTEM</div>
+                    </div>
+                    <p class="flavor-text">稼いで、雇って、全てを壊せ。</p>
+
+                    <div id="currentCharDisplay" class="char-preview">
+                        <div class="preview-box">
+                            <div id="previewAvatar" class="avatar-placeholder"></div>
+                        </div>
+                        <div class="char-info" id="selectedCharInfo">
+                            <strong id="selectedCharName">解体ルーキー・テツ</strong>
+                            <div class="char-stats-mini" id="selectedCharStats">
+                                <!-- Stats injected here -->
+                            </div>
+                            <p id="selectedCharDesc">ガッツ溢れる新人職人。平均的な能力。</p>
+                        </div>
+                    </div>
+
+                    <div class="menu-buttons">
+                        <button id="startBtn" class="premium-btn">SITE ENTRY</button>
+                        <button id="openStageBtn" class="premium-btn secondary">SELECT STAGE</button>
+                        <button id="openCharBtn" class="premium-btn secondary">WORKERS</button>
+                    </div>
+                </div>
+
+                <!-- Stage Selection -->
+                <div id="stageScreen" class="modal hidden">
+                    <h2>STAGE SELECT</h2>
+                    <div id="stageList" class="stage-grid">
+                        <!-- Stages will be injected here -->
+                    </div>
+                    <button id="backFromStageBtn" class="premium-btn secondary">BACK</button>
+                </div>
+
+                <!-- Character Selection / Shop -->
+                <div id="charScreen" class="modal hidden">
+                    <h2>WORKERS LIST</h2>
+                    <div id="charList" class="char-grid">
+                        <!-- Characters will be injected here -->
+                    </div>
+                    <button id="backToMainBtn" class="premium-btn secondary">BACK</button>
+                </div>
+
+                <!-- Result Screen -->
+                <div id="resultScreen" class="modal hidden">
+                    <div class="success-icon">✓</div>
+                    <h2 id="resultTitle">PROJECT COMPLETE</h2>
+                    <p id="resultMessage">Excellent demolition.</p>
+                    <div class="result-stats">
+                        <div class="stat-line">EARNED: <span class="unit">¥</span><span id="earnedMoney">0</span></div>
+                        <div id="timeBonusRow" class="bonus hidden">TIME BONUS: <span class="unit">¥</span><span
+                                id="timeBonus">0</span></div>
+                    </div>
+                    <div class="menu-buttons">
+                        <button id="nextStageBtn" class="premium-btn">NEXT SITE</button>
+                        <button id="backToTopBtn" class="premium-btn secondary">TOP MENU</button>
+                    </div>
+                </div>
+
+                <!-- Game Over -->
+                <div id="gameOverScreen" class="modal hidden">
+                    <div class="fail-icon">!</div>
+                    <h2 id="resultTitleOver">PROJECT FAILED</h2>
+                    <p id="resultMessageOver">Budget exhausted. Site closed.</p>
+                    <div class="menu-buttons">
+                        <button id="restartBtn" class="premium-btn">RE-ENTRY</button>
+                        <button id="gameOverTopBtn" class="premium-btn secondary">TOP MENU</button>
+                    </div>
+                </div>
+
+                <!-- Pause Screen -->
+                <div id="pauseScreen" class="modal hidden">
+                    <div class="pause-icon">II</div>
+                    <h2>PAUSED</h2>
+                    <div class="pause-stats">
+                        <div class="pause-stat-row">WORKER: <span id="pauseCharName">テツ</span></div>
+                        <div class="pause-stat-row">SCORE: <span id="pauseScore">0</span></div>
+                        <div class="pause-stat-row">LIVES: <span id="pauseLives">3</span></div>
+                    </div>
+                    <div class="menu-buttons">
+                        <button id="resumeBtn" class="premium-btn">RESUME</button>
+                        <button id="pauseTopBtn" class="premium-btn secondary">TOP MENU</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script type="module" src="./src/main.js"></script>
+</body>
+
+</html>
