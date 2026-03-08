@@ -25,6 +25,9 @@ class Game {
         
         this.score = 0;
         this.lives = 3;
+        this.destroyedBricksCount = 0; // 破壊したブロックの数
+        this.clearBonus = 5000;      // クリア報酬
+        this.bonusAdded = false;     // ボーナス加算済みフラグ
         this.gameOver = false;
         this.gameWin = false;
         this.gameStarted = false;
@@ -131,9 +134,11 @@ class Game {
                 }
             } else if (this.gameOver || this.gameWin) {
                 // リスタートボタン判定
+                // 中央のリスタートボタン付近
+                const buttonY = this.gameWin ? CANVAS_HEIGHT / 2 + 130 : CANVAS_HEIGHT / 2 + 60;
                 if (canvasX > CANVAS_WIDTH / 2 - 100 && canvasX < CANVAS_WIDTH / 2 + 100 &&
-                    canvasY > CANVAS_HEIGHT / 2 + 60 && canvasY < CANVAS_HEIGHT / 2 + 110) {
-                    location.reload();
+                    canvasY > buttonY && canvasY < buttonY + 50) {
+                    location.reload(); // シンプルにリロードしてリスタート
                 }
             }
         };
@@ -143,7 +148,6 @@ class Game {
         });
 
         this.canvas.addEventListener('touchstart', (e) => {
-            // 新しく置かれた指（changedTouches）を全てチェック
             for (const touch of e.changedTouches) {
                 handleCanvasInput(touch.clientX, touch.clientY);
             }
@@ -243,6 +247,7 @@ class Game {
 
             // 破壊された時のみの処理
             if (collisionResult.destroyed) {
+                this.destroyedBricksCount++; // 破壊数をカウント
                 // EXP獲得
                 const leveledUp = this.player.addExp(10);
                 if (leveledUp) {
@@ -261,6 +266,10 @@ class Game {
             
             if (this.levelManager.areAllBricksCleared() && !this.gameWin) {
                 this.gameWin = true;
+                if (!this.bonusAdded) {
+                    this.player.money += this.clearBonus;
+                    this.bonusAdded = true;
+                }
                 this.playWebAudioSE(this.winSEBuffer, 0.5);
                 this.stopBGM();
             }
@@ -502,7 +511,7 @@ class Game {
         } else if (this.gameOver) {
             this.drawOverlay('GAME OVER', '#ff5252');
         } else if (this.gameWin) {
-            this.drawOverlay('YOU WIN!', '#4caf50');
+            this.drawResultScreen();
         }
     }
 
@@ -982,6 +991,65 @@ class Game {
         this.ctx.font = 'bold 14px "Segoe UI"';
         this.ctx.textAlign = 'center';
         this.ctx.fillText("▼ タップして次へ ▼", boxX + boxW / 2, boxY + boxH - 15);
+    }
+
+    drawResultScreen() {
+        const ctx = this.ctx;
+        const cx = CANVAS_WIDTH / 2;
+        const cy = CANVAS_HEIGHT / 2;
+
+        // 背景
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
+        ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+        // クリア！の文字
+        ctx.fillStyle = '#ffeb3b';
+        ctx.font = 'bold 48px "Segoe UI"';
+        ctx.textAlign = 'center';
+        ctx.fillText('STAGE CLEAR!', cx, cy - 180);
+
+        // パネル
+        const panelW = 320;
+        const panelH = 260;
+        const panelX = cx - panelW / 2;
+        const panelY = cy - 140;
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+        ctx.beginPath();
+        ctx.roundRect(panelX, panelY, panelW, panelH, 15);
+        ctx.fill();
+
+        // 項目
+        const stats = [
+            { label: 'SCORE', value: this.formatScore(this.score) },
+            { label: 'BLOCKS DESTROYED', value: this.destroyedBricksCount },
+            { label: 'CLEAR BONUS', value: `¥${this.clearBonus.toLocaleString()}`, color: '#ffeb3b' },
+            { label: 'TOTAL MONEY', value: `¥${this.player.money.toLocaleString()}`, color: '#ffdf00' }
+        ];
+
+        stats.forEach((stat, i) => {
+            const sy = panelY + 60 + i * 50;
+            ctx.fillStyle = '#aaa';
+            ctx.font = 'bold 16px "Segoe UI"';
+            ctx.textAlign = 'left';
+            ctx.fillText(stat.label, panelX + 30, sy);
+
+            ctx.fillStyle = stat.color || '#fff';
+            ctx.font = 'bold 22px "Segoe UI"';
+            ctx.textAlign = 'right';
+            ctx.fillText(stat.value, panelX + panelW - 30, sy);
+        });
+
+        // ボタン
+        const buttonY = cy + 130;
+        ctx.fillStyle = '#4caf50';
+        ctx.beginPath();
+        ctx.roundRect(cx - 100, buttonY, 200, 50, 10);
+        ctx.fill();
+
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 20px "Segoe UI"';
+        ctx.textAlign = 'center';
+        ctx.fillText('Tap to Restart', cx, buttonY + 33);
     }
 }
 
