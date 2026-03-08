@@ -1,4 +1,4 @@
-import { CANVAS_WIDTH, CANVAS_HEIGHT, BALL_INITIAL_SPEED, SPECIAL_GAUGE_MAX, GAUGE_CHARGE_PER_HIT, LASER_DAMAGE } from './Constants.js';
+import { CANVAS_WIDTH, CANVAS_HEIGHT, BALL_INITIAL_SPEED, SPECIAL_GAUGE_MAX, GAUGE_CHARGE_PER_HIT, LASER_DAMAGE, MONEY_DROP_RATE, MAGNET_RADIUS } from './Constants.js';
 import { Ball } from './Ball.js';
 import { Paddle } from './Paddle.js';
 import { LevelManager } from './LevelManager.js';
@@ -280,6 +280,15 @@ class Game {
                 if (leveledUp) {
                     this.onLevelUp();
                 }
+
+                // アイテム（資金）確率ドロップ
+                if (Math.random() < MONEY_DROP_RATE) {
+                    this.items.push(new Item(
+                        collisionResult.brick.x + collisionResult.brick.width / 2 - 7.5,
+                        collisionResult.brick.y + collisionResult.brick.height / 2 - 7.5,
+                        ITEM_TYPES.MONEY
+                    ));
+                }
             }
             
             if (this.levelManager.areAllBricksCleared() && !this.gameWin) {
@@ -292,18 +301,47 @@ class Game {
         // アイテムの更新と取得
         for (let i = this.items.length - 1; i >= 0; i--) {
             const item = this.items[i];
-            item.update();
+            item.update(this.paddle);
+
+            // お金の吸い込み判定（パドルの当たり判定より少し広い）
+            if (item.type === ITEM_TYPES.MONEY && item.state === 'NORMAL') {
+                const paddleCenterX = this.paddle.x + this.paddle.width / 2;
+                const itemCenterX = item.x + item.width / 2;
+                
+                // y軸はある程度パドルに近く、x軸がパドル周辺なら吸い込み開始
+                if (item.y + item.height > this.paddle.y - MAGNET_RADIUS && 
+                    Math.abs(itemCenterX - paddleCenterX) < (this.paddle.width / 2) + MAGNET_RADIUS) {
+                    item.startSuction();
+                }
+            }
             
+            // 実際の取得判定（パドル領域内）
             if (item.active && 
-                item.x < this.paddle.x + this.paddle.width &&
-                item.x + item.width > this.paddle.x &&
-                item.y < this.paddle.y + this.paddle.height &&
-                item.y + item.height > this.paddle.y) {
+                item.x + item.width/2 > this.paddle.x &&
+                item.x + item.width/2 < this.paddle.x + this.paddle.width &&
+                item.y + item.height > this.paddle.y &&
+                item.y + item.height/2 < this.paddle.y + this.paddle.height) {
                 
                 // アイテム効果
                 if (item.type === ITEM_TYPES.EXPAND) {
                     this.paddle.width += 20;
                     this.playWebAudioSE(this.paddleStretchSEBuffer, 0.7);
+                } else if (item.type === ITEM_TYPES.MONEY) {
+                    this.player.money += 100; // 金額設定
+                    // SE（短いビープ）
+                    if (this.audioCtx) {
+                        const osc = this.audioCtx.createOscillator();
+                        const gain = this.audioCtx.createGain();
+                        osc.type = 'sine';
+                        osc.frequency.setValueAtTime(880, this.audioCtx.currentTime); // A5
+                        osc.frequency.exponentialRampToValueAtTime(1760, this.audioCtx.currentTime + 0.1); // A6
+                        gain.gain.setValueAtTime(0.3, this.audioCtx.currentTime);
+                        gain.gain.exponentialRampToValueAtTime(0.01, this.audioCtx.currentTime + 0.1);
+                        osc.connect(gain);
+                        gain.connect(this.audioCtx.destination);
+                        osc.start();
+                        osc.stop(this.audioCtx.currentTime + 0.1);
+                    }
                 }
                 item.active = false;
             }
@@ -407,6 +445,12 @@ class Game {
         this.ctx.font = 'bold 18px "Segoe UI"';
         this.ctx.textAlign = 'left';
         this.ctx.fillText(`Score: ${this.formatScore(this.score)}`, 15, 28);
+        
+        // 所持金の表示（Scoreのすぐ右）
+        this.ctx.fillStyle = '#ffdf00'; // ゴールド
+        this.ctx.fillText(`¥${this.player.money}`, 180, 28);
+
+        this.ctx.fillStyle = '#fff';
         this.ctx.textAlign = 'right';
         this.ctx.fillText(`Lives: ${this.lives}`, CANVAS_WIDTH - 55, 28); // ポーズボタン分左にずらす
 

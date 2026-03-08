@@ -3,6 +3,7 @@ export class Player {
         this.level = 1;
         this.exp = 0;
         this.expToNextLevel = 100; // Lv1→2は100EXP
+        this.money = 0; // 所持金
 
         // ステータス初期値
         this.attack = 10;   // ダメージ
