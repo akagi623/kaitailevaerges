@@ -1,5 +1,5 @@
-export const CANVAS_WIDTH = 800;
-export const CANVAS_HEIGHT = 600;
+export const CANVAS_WIDTH = 450;
+export const CANVAS_HEIGHT = 800;
 
 export const COLORS = {
     BALL: '#ffffff',
@@ -14,17 +14,17 @@ export const COLORS = {
 export const BALL_RADIUS = 8;
 export const BALL_INITIAL_SPEED = 5;
 
-export const PADDLE_WIDTH = 100;
+export const PADDLE_WIDTH = 80;
 export const PADDLE_HEIGHT = 15;
 export const PADDLE_SPEED = 8;
 
-export const BRICK_ROWS = 5;
-export const BRICK_COLS = 10;
-export const BRICK_WIDTH = 70;
+export const BRICK_ROWS = 12;
+export const BRICK_COLS = 6;
+export const BRICK_WIDTH = 60;
 export const BRICK_HEIGHT = 20;
-export const BRICK_PADDING = 10;
-export const BRICK_OFFSET_TOP = 50;
-export const BRICK_OFFSET_LEFT = 35;
+export const BRICK_PADDING = 8;
+export const BRICK_OFFSET_TOP = 60;
+export const BRICK_OFFSET_LEFT = 23;
 
 export const SPECIAL_GAUGE_MAX = 100;
 export const GAUGE_CHARGE_PER_HIT = 2; // パドルorブロックヒットでの上昇量

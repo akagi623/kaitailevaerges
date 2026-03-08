@@ -264,20 +264,20 @@ class Game {
 
     drawUI() {
         this.ctx.fillStyle = '#fff';
-        this.ctx.font = '20px "Segoe UI"';
+        this.ctx.font = '18px "Segoe UI"';
         this.ctx.textAlign = 'left';
-        this.ctx.fillText(`Score: ${this.score.toLocaleString()}`, 20, 30);
+        this.ctx.fillText(`Score: ${this.score.toLocaleString()}`, 15, 25);
         this.ctx.textAlign = 'right';
-        this.ctx.fillText(`Lives: ${this.lives}`, CANVAS_WIDTH - 20, 30);
+        this.ctx.fillText(`Lives: ${this.lives}`, CANVAS_WIDTH - 15, 25);
 
         // LEVERAGEの表示（コンボ中または直近の値を表示）
         const displayCombo = this.combo > 0 ? this.combo : this.lastCombo;
         if (displayCombo > 0) {
             const label = displayCombo >= 2 ? 'LEVERAGES!' : 'LEVERAGE!';
-            this.ctx.fillStyle = this.combo > 0 ? '#ffeb3b' : '#9e9e9e'; // コンボ継続中は黄色、リセット後はグレー
-            this.ctx.font = 'bold 24px "Segoe UI"';
+            this.ctx.fillStyle = this.combo > 0 ? '#ffeb3b' : '#9e9e9e'; 
+            this.ctx.font = 'bold 20px "Segoe UI"';
             this.ctx.textAlign = 'center';
-            this.ctx.fillText(`${displayCombo} ${label}`, CANVAS_WIDTH / 2, 30);
+            this.ctx.fillText(`${displayCombo} ${label}`, CANVAS_WIDTH / 2, 25);
         }
 
         // 必殺技ゲージの描画
@@ -318,10 +318,10 @@ class Game {
     }
 
     drawSpecialGauge() {
-        const width = 120;
-        const height = 40;
-        const x = CANVAS_WIDTH - width - 20;
-        const y = CANVAS_HEIGHT - height - 20;
+        const width = 140; // スマホで押しやすく少し大きく
+        const height = 50;
+        const x = CANVAS_WIDTH - width - 15;
+        const y = CANVAS_HEIGHT - height - 15;
         const fillWidth = (this.specialGauge / SPECIAL_GAUGE_MAX) * width;
 
         // ボタンの背景
