@@ -26,6 +26,7 @@ class Game {
         this.gameOver = false;
         this.gameWin = false;
         this.gameStarted = false;
+        this.entranceEndTime = 0; // 「現場入場！」フラッシュ終了時刻
         this.combo = 0;
         this.lastCombo = 0; // 直近のコンボ数を保持
         this.baseDamage = 10;
@@ -56,6 +57,7 @@ class Game {
         const startHandler = (e) => {
             if (!this.gameStarted) {
                 this.gameStarted = true;
+                this.entranceEndTime = Date.now() + 500; // 0.5秒間フラッシュ
 
                 // Web Audio の初期化（ユーザー操作後に必須）
                 this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -134,7 +136,7 @@ class Game {
     }
 
     update(deltaTime) {
-        if (!this.gameStarted || this.gameOver || this.gameWin) return;
+        if (!this.gameStarted || this.gameOver || this.gameWin || Date.now() < this.entranceEndTime) return;
 
         this.paddle.update();
         this.ball.update();
@@ -309,8 +311,19 @@ class Game {
         // 必殺技ゲージの描画
         this.drawSpecialGauge();
 
+        // 現場入場！フラッシュ
+        if (this.gameStarted && Date.now() < this.entranceEndTime) {
+            this.ctx.fillStyle = 'rgba(0,0,0,0.5)';
+            this.ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+            this.ctx.fillStyle = '#ffeb3b';
+            this.ctx.font = 'bold 56px "Segoe UI"';
+            this.ctx.textAlign = 'center';
+            this.ctx.fillText('現場入場！', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2);
+            return;
+        }
+
         if (!this.gameStarted) {
-            this.drawOverlay('CLICK TO START', '#4fc3f7');
+            this.drawOverlay('Tap TO START', '#4fc3f7');
         } else if (this.gameOver) {
             this.drawOverlay('GAME OVER', '#ff5252');
         } else if (this.gameWin) {
@@ -390,7 +403,7 @@ class Game {
         const laserWidth = 30;
 
         // レーザーSE（音量大きめ）
-        this.playWebAudioSE(this.laserSEBuffer, 1.5);
+        this.playWebAudioSE(this.laserSEBuffer, 3.0);
 
         // レーザーエフェクト
         this.effectManager.createLaser(laserX, laserWidth, this.paddle.y);
