@@ -900,7 +900,7 @@ class Game {
         // 親方アイコン (画像があれば画像、なければ絵文字)
         const iconSize = 110;
         const iconX = boxX + 60;
-        const iconY = boxY - 40;
+        const iconY = boxY - 80;
         
         // 白背景（フチ）
         this.ctx.fillStyle = '#fff';
