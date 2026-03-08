@@ -1,4 +1,4 @@
-import { CANVAS_WIDTH, CANVAS_HEIGHT, BALL_INITIAL_SPEED, SPECIAL_GAUGE_MAX, GAUGE_CHARGE_PER_HIT, LASER_DAMAGE, MONEY_DROP_RATE, MAGNET_RADIUS, GAME_STATE } from './Constants.js';
+import { CANVAS_WIDTH, CANVAS_HEIGHT, BALL_INITIAL_SPEED, SPECIAL_GAUGE_MAX, GAUGE_CHARGE_PER_HIT, LASER_DAMAGE, MONEY_DROP_RATE, MAGNET_RADIUS, GAME_STATE, STAGE_ID, STAGE_CONFIG } from './Constants.js';
 import { Ball } from './Ball.js';
 import { Paddle } from './Paddle.js';
 import { LevelManager } from './LevelManager.js';
@@ -105,11 +105,19 @@ class Game {
                     this.gameState = GAME_STATE.STAGE_SELECT;
                 }
             } else if (this.gameState === GAME_STATE.STAGE_SELECT) {
-                // ステージ選択（Stage 1：池袋）
+                // ステージ選択
                 const btnX = 50;
-                const btnY = 150;
-                if (canvasX > btnX && canvasX < btnX + 350 && canvasY > btnY && canvasY < btnY + 80) {
-                    this.startGame();
+                const s1Y = 150;
+                const s2Y = 250;
+                const btnW = 350, btnH = 80;
+
+                // Stage 1：池袋
+                if (canvasX > btnX && canvasX < btnX + btnW && canvasY > s1Y && canvasY < s1Y + btnH) {
+                    this.startGame(STAGE_ID.IKEBUKURO);
+                }
+                // Stage 2：渋谷
+                if (canvasX > btnX && canvasX < btnX + btnW && canvasY > s2Y && canvasY < s2Y + btnH) {
+                    this.startGame(STAGE_ID.SHIBUYA);
                 }
             } else if (this.gameState === GAME_STATE.PLAYING) {
                 // ポーズ中・レベルアップ中・チュートリアル中は常に判定を優先
@@ -220,7 +228,15 @@ class Game {
         }
     }
 
-    startGame() {
+    startGame(stageId = STAGE_ID.IKEBUKURO) {
+        // ステージに応じてプレイヤーのレベルを初期化（レベル1に戻る）
+        if (stageId === STAGE_ID.SHIBUYA) {
+            this.player = new Player(); // レベル、ステータス、EXPをリセット
+            this.paddle.width = this.player.defense;
+            this.paddle.speed = this.player.speed;
+        }
+
+        this.levelManager.init(stageId);
         this.gameState = GAME_STATE.PLAYING;
         this.gameStarted = true;
         this.entranceEndTime = Date.now() + 500;
@@ -1273,8 +1289,24 @@ class Game {
         ctx.fillStyle = '#aaa';
         ctx.fillText('難易度: ★☆☆☆☆', s1X + 20, s1Y + 60);
 
-        // Coming Soon
-        for (let i = 1; i <= 4; i++) {
+        // Stage 2: 渋谷
+        const s2Y = 250;
+        ctx.fillStyle = 'rgba(33, 150, 243, 0.2)';
+        ctx.strokeStyle = '#2196f3';
+        ctx.beginPath();
+        ctx.roundRect(s1X, s2Y, s1W, s1H, 10);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 22px "Segoe UI"';
+        ctx.fillText('Stage 2: 渋谷', s1X + 20, s2Y + 35);
+        ctx.font = '14px "Segoe UI"';
+        ctx.fillStyle = '#aaa';
+        ctx.fillText('難易度: ★★☆☆☆', s1X + 20, s2Y + 60);
+
+        // Coming Soon (Stage 3以降)
+        for (let i = 2; i <= 4; i++) {
             const sy = 150 + i * 100;
             ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
             ctx.strokeStyle = '#444';

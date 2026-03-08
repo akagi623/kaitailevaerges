@@ -1,6 +1,7 @@
 import { 
     BRICK_ROWS, BRICK_COLS, BRICK_WIDTH, BRICK_HEIGHT, 
-    BRICK_PADDING, BRICK_OFFSET_TOP, BRICK_OFFSET_LEFT, ISSUE_BRICK_HP
+    BRICK_PADDING, BRICK_OFFSET_TOP, BRICK_OFFSET_LEFT, ISSUE_BRICK_HP,
+    STAGE_CONFIG
 } from './Constants.js';
 import { Brick } from './Brick.js';
 
@@ -8,12 +9,16 @@ export class LevelManager {
     constructor() {
         this.bricks = [];
         this.issueSpawned = false;
+        this.currentStageId = null;
         this.init();
     }
 
-    init() {
+    init(stageId = 'ikebukuro') {
         this.bricks = [];
         this.issueSpawned = false;
+        this.currentStageId = stageId;
+
+        const isShibuya = (stageId === 'shibuya');
 
         for (let r = 0; r < BRICK_ROWS; r++) {
             for (let c = 0; c < BRICK_COLS; c++) {
@@ -24,11 +29,16 @@ export class LevelManager {
                 const isIssue = false;
                 const isEdge = (c === 0 || c === BRICK_COLS - 1);
                 
-                // 中央付近（内側4列×内側3行などを想定）
-                // c: 1〜4, r: 2〜4 がおおよそ中央。
-                const isCenterTarget = (c >= 1 && c <= BRICK_COLS - 2 && r >= 2 && r <= BRICK_ROWS - 3);
+                let isCenterTarget = false;
+                if (isShibuya) {
+                    // 渋谷：スクランブル配置（市松模様的な難しさ）
+                    isCenterTarget = (r >= 1 && r <= 5 && c >= 1 && c <= 4 && (r + c) % 2 === 0);
+                } else {
+                    // 池袋：通常配置（中央付近）
+                    isCenterTarget = (c >= 1 && c <= BRICK_COLS - 2 && r >= 2 && r <= BRICK_ROWS - 3);
+                }
                 
-                const hp = Math.floor(Math.random() * 31) + 20;
+                const hp = isShibuya ? Math.floor(Math.random() * 41) + 30 : Math.floor(Math.random() * 31) + 20;
 
                 const brick = new Brick(brickX, brickY, hp, isIssue, isEdge);
                 brick.isCenterTarget = isCenterTarget;
@@ -72,8 +82,13 @@ export class LevelManager {
                 if (!this.issueSpawned && respawnedBrick.isCenterTarget) {
                     this.issueSpawned = true;
                     respawnedBrick.isIssue = true;
-                    respawnedBrick.hp = ISSUE_BRICK_HP;
-                    respawnedBrick.maxHp = ISSUE_BRICK_HP;
+                    
+                    // ステージ設定からコアHPを取得
+                    const config = STAGE_CONFIG[this.currentStageId] || STAGE_CONFIG['ikebukuro'];
+                    const coreHp = config.coreHp;
+
+                    respawnedBrick.hp = coreHp;
+                    respawnedBrick.maxHp = coreHp;
                     isIssueSpawn = true;
                 }
                 

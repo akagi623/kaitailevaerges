@@ -45,3 +45,21 @@ export const GAME_STATE = {
     PLAYING: 'PLAYING',
     RESULT: 'RESULT'
 };
+
+export const STAGE_ID = {
+    IKEBUKURO: 'ikebukuro',
+    SHIBUYA: 'shibuya'
+};
+
+export const STAGE_CONFIG = {
+    [STAGE_ID.IKEBUKURO]: {
+        name: '池袋',
+        coreHp: 1,
+        difficulty: 1
+    },
+    [STAGE_ID.SHIBUYA]: {
+        name: '渋谷',
+        coreHp: 5,
+        difficulty: 2
+    }
+};
