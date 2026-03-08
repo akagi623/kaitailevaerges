@@ -116,10 +116,11 @@ class Game {
                     this.gameState = GAME_STATE.STAGE_SELECT;
                 }
                 
-                // プロショップボタン
-                const shopBtnX = CANVAS_WIDTH / 2 - 80;
-                const shopBtnY = CANVAS_HEIGHT - 80;
-                if (canvasX > shopBtnX && canvasX < shopBtnX + 160 && canvasY > shopBtnY && canvasY < shopBtnY + 50) {
+                // プロショップボタン (右上へ移動)
+                const shopBtnW = 140, shopBtnH = 40;
+                const shopBtnX = CANVAS_WIDTH - shopBtnW - 15;
+                const shopBtnY = 15;
+                if (canvasX > shopBtnX && canvasX < shopBtnX + shopBtnW && canvasY > shopBtnY && canvasY < shopBtnY + shopBtnH) {
                     this.gameState = GAME_STATE.SHOP;
                 }
             } else if (this.gameState === GAME_STATE.SHOP) {
@@ -168,12 +169,15 @@ class Game {
                 }
 
                 if (!this.gameOver && !this.gameWin) {
-                    if (Date.now() >= this.entranceEndTime) {
-                        if (canvasX > CANVAS_WIDTH - 50 && canvasY < 40) {
-                            this.paused = true;
-                        } else if (canvasX < 155 && canvasY > CANVAS_HEIGHT - 65) {
-                            this.fireLaser();
-                        }
+                    // 入場フラッシュ中ならタップでスキップ
+                    if (Date.now() < this.entranceEndTime) {
+                        this.entranceEndTime = 0;
+                        return;
+                    }
+                    if (canvasX > CANVAS_WIDTH - 50 && canvasY < 40) {
+                        this.paused = true;
+                    } else if (canvasX < 155 && canvasY > CANVAS_HEIGHT - 65) {
+                        this.fireLaser();
                     }
                 }
             }
@@ -1291,19 +1295,19 @@ class Game {
         ctx.fillText(this.yasuImage.complete ? '選択' : 'Loading...', CANVAS_WIDTH / 2, btnY + btnH / 2);
         ctx.textBaseline = 'alphabetic';
 
-        // プロショップボタン
-        const shopBtnW = 160, shopBtnH = 45;
-        const shopBtnX = CANVAS_WIDTH / 2 - shopBtnW / 2;
-        const shopBtnY = CANVAS_HEIGHT - 80;
+        // プロショップボタン (右上へ移動)
+        const shopBtnW = 140, shopBtnH = 40;
+        const shopBtnX = CANVAS_WIDTH - shopBtnW - 15;
+        const shopBtnY = 15;
         ctx.fillStyle = '#ff9800';
         ctx.beginPath();
         ctx.roundRect(shopBtnX, shopBtnY, shopBtnW, shopBtnH, 10);
         ctx.fill();
         ctx.fillStyle = '#fff';
-        ctx.font = 'bold 18px "Segoe UI"';
+        ctx.font = 'bold 16px "Segoe UI"';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText('🛒 プロショップ', CANVAS_WIDTH / 2, shopBtnY + shopBtnH / 2);
+        ctx.fillText('🛒 プロショップ', shopBtnX + shopBtnW / 2, shopBtnY + shopBtnH / 2);
         ctx.textBaseline = 'alphabetic';
     }
 
@@ -1324,7 +1328,7 @@ class Game {
 
         // アイテムリスト
         EQUIPMENT_DATA.forEach((item, i) => {
-            const itemY = 130 + i * 110;
+            const itemY = 130 + i * 130;
             const itemX = 20;
             const itemW = CANVAS_WIDTH - 40;
             const itemH = 100;
@@ -1412,7 +1416,7 @@ class Game {
     handleShopTouch(canvasX, canvasY) {
         // アイテムボタン判定
         EQUIPMENT_DATA.forEach((item, i) => {
-            const itemY = 130 + i * 110;
+            const itemY = 130 + i * 130;
             const btnX = CANVAS_WIDTH - 140, btnY = itemY + 30;
             const btnW = 100, btnH = 40;
 
