@@ -39,9 +39,15 @@ class Game {
         this.bgm.loop = true;
         this.bgm.volume = 0.5;
 
-        // SEの設定
-        this.hitSE = new Audio('soundeffect/cracker_3.mp3');
-        this.hitSE.volume = 0.6;
+        // SEの設定（プール方式に変更）
+        this.hitPoolSize = 10;
+        this.hitSEPool = [];
+        for (let i = 0; i < this.hitPoolSize; i++) {
+            const se = new Audio('soundeffect/cracker_3.mp3');
+            se.volume = 0.6;
+            this.hitSEPool.push(se);
+        }
+
         this.winSE = new Audio('soundeffect/winse.mp3');
         this.winSE.volume = 0.5;
         this.loseSE = new Audio('soundeffect/losese.mp3');
@@ -395,10 +401,17 @@ class Game {
     }
 
     playHitSE() {
-        // 音声を複製して再生（これで複数が重なって鳴るようになる）
-        const se = this.hitSE.cloneNode(true);
-        se.volume = 0.6;
-        se.play().catch(e => console.error("SE playback failed:", e));
+        // プールから再生中でない（または終了した）SEを探す
+        const se = this.hitSEPool.find(audio => audio.paused || audio.ended);
+        if (se) {
+            se.currentTime = 0;
+            se.play().catch(e => console.error("SE playback failed:", e));
+        } else {
+            // 全て再生中の場合は、一番古いものを再利用（簡易版）
+            const oldest = this.hitSEPool[0];
+            oldest.currentTime = 0;
+            oldest.play().catch(e => console.error("SE playback failed:", e));
+        }
     }
 
     increaseBallSpeed(amount) {
@@ -426,9 +439,21 @@ class Game {
             } else {
                 this.bgm.volume = 0;
                 this.bgm.pause();
+                this.bgm.currentTime = 0; // 最初に戻す
                 clearInterval(fadeInterval);
+                this.isFadingOut = false; // フラグをリセット
             }
         }, 100);
+
+        // 念のため一定時間後に強制停止
+        setTimeout(() => {
+            if (this.bgm.paused === false) {
+                this.bgm.pause();
+                this.bgm.volume = 0;
+                clearInterval(fadeInterval);
+                this.isFadingOut = false;
+            }
+        }, 3000);
     }
 
     loop(timestamp) {
