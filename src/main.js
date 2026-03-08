@@ -196,7 +196,6 @@ class Game {
             loadSE('soundeffect/laser.mp3').then(b => { this.laserSEBuffer = b; }).catch(e => console.error('Laser SE load failed:', e));
             loadSE('soundeffect/padolstrech.mp3').then(b => { this.paddleStretchSEBuffer = b; }).catch(e => console.error('Paddle SE load failed:', e));
             loadSE('soundeffect/levelup.mp3').then(b => { this.levelupSEBuffer = b; }).catch(e => console.error('LevelUp SE load failed:', e));
-            this.bgm.play().catch(e => console.error("Audio playback failed:", e));
         }
     }
 
@@ -204,6 +203,7 @@ class Game {
         this.gameState = GAME_STATE.PLAYING;
         this.gameStarted = true;
         this.entranceEndTime = Date.now() + 500;
+        this.bgm.play().catch(e => console.error("Audio playback failed:", e));
     }
 
     showTutorial(step, brick = null) {
@@ -1194,6 +1194,7 @@ class Game {
         ctx.fill();
         ctx.fillStyle = '#fff';
         ctx.font = 'bold 18px "Segoe UI"';
+        ctx.textAlign = 'center';
         ctx.fillText('選択', CANVAS_WIDTH / 2, btnY + 28);
     }
 
