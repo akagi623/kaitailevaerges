@@ -177,8 +177,7 @@ class Game {
             if (collisionResult.destroyed) {
                 // アイテムドロップ（確率）
                 if (Math.random() < 0.2) {
-                    const type = Math.random() < 0.5 ? ITEM_TYPES.EXPAND : ITEM_TYPES.EXTRA_BALL;
-                    this.items.push(new Item(collisionResult.brick.x, collisionResult.brick.y, type));
+                    this.items.push(new Item(collisionResult.brick.x, collisionResult.brick.y, ITEM_TYPES.EXPAND));
                 }
             }
             
@@ -390,8 +389,8 @@ class Game {
         const laserX = this.paddle.x + this.paddle.width / 2;
         const laserWidth = 30;
 
-        // レーザーSE
-        this.playWebAudioSE(this.laserSEBuffer, 0.7);
+        // レーザーSE（音量大きめ）
+        this.playWebAudioSE(this.laserSEBuffer, 1.5);
 
         // レーザーエフェクト
         this.effectManager.createLaser(laserX, laserWidth, this.paddle.y);
