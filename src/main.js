@@ -187,6 +187,7 @@ class Game {
         this.paddle.update();
         this.ball.update();
         this.effectManager.update();
+        this.levelManager.update(deltaTime);
         
         // コンボとプレイヤー攻撃力に応じたダメージ計算
         const currentDamage = Math.floor(this.player.attack * Math.pow(1.5, Math.max(0, this.combo)));

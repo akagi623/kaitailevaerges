@@ -1,6 +1,6 @@
 import { 
     BRICK_ROWS, BRICK_COLS, BRICK_WIDTH, BRICK_HEIGHT, 
-    BRICK_PADDING, BRICK_OFFSET_TOP, BRICK_OFFSET_LEFT 
+    BRICK_PADDING, BRICK_OFFSET_TOP, BRICK_OFFSET_LEFT, ISSUE_BRICK_HP
 } from './Constants.js';
 import { Brick } from './Brick.js';
 
@@ -12,13 +12,21 @@ export class LevelManager {
 
     init() {
         this.bricks = [];
+        const totalBricks = BRICK_ROWS * BRICK_COLS;
+        const issueIndex = Math.floor(Math.random() * totalBricks);
+
         for (let r = 0; r < BRICK_ROWS; r++) {
             for (let c = 0; c < BRICK_COLS; c++) {
                 const brickX = (c * (BRICK_WIDTH + BRICK_PADDING)) + BRICK_OFFSET_LEFT;
                 const brickY = (r * (BRICK_HEIGHT + BRICK_PADDING)) + BRICK_OFFSET_TOP;
-                // 耐久度を20〜50で設定
-                const hp = Math.floor(Math.random() * 31) + 20;
-                this.bricks.push(new Brick(brickX, brickY, hp));
+                
+                const index = r * BRICK_COLS + c;
+                const isIssue = (index === issueIndex);
+                const isEdge = (c === 0 || c === BRICK_COLS - 1);
+                
+                const hp = isIssue ? ISSUE_BRICK_HP : Math.floor(Math.random() * 31) + 20;
+
+                this.bricks.push(new Brick(brickX, brickY, hp, isIssue, isEdge));
             }
         }
     }
@@ -51,6 +59,12 @@ export class LevelManager {
         return { hit: false };
     }
 
+    update(deltaTime) {
+        for (let brick of this.bricks) {
+            brick.update(deltaTime);
+        }
+    }
+
     draw(ctx) {
         for (let brick of this.bricks) {
             brick.draw(ctx);
@@ -69,6 +83,9 @@ export class LevelManager {
 
                 // 横方向の重なりがあるかチェック
                 if (laserRight > brickLeft && laserLeft < brickRight) {
+                    if (brick.isIssue) {
+                        continue; // イシューブロックにはレーザー無効
+                    }
                     brick.hit(damage);
                     results.push({
                         brick: brick,
@@ -82,6 +99,7 @@ export class LevelManager {
     }
 
     areAllBricksCleared() {
-        return this.bricks.every(b => !b.active);
+        const issueBrick = this.bricks.find(b => b.isIssue);
+        return issueBrick ? !issueBrick.active : false;
     }
 }

@@ -30,3 +30,7 @@ export const SPECIAL_GAUGE_MAX = 100;
 export const GAUGE_CHARGE_PER_HIT = 2; // パドルorブロックヒットでの上昇量
 export const LASER_DAMAGE = 40;
 export const LASER_COOLDOWN = 1000;
+
+export const ISSUE_BRICK_HP = 5;
+export const RESPAWN_TIME_NORMAL = 10000;
+export const RESPAWN_TIME_EDGE = 30000;
