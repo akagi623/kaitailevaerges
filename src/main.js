@@ -355,7 +355,7 @@ class Game {
             this.ctx.fillStyle = '#fff';
             this.ctx.font = 'bold 12px "Segoe UI"';
             this.ctx.textAlign = 'left';
-            this.ctx.fillText(`Lv.${this.player.level}`, barX, barY - 1);
+            this.ctx.fillText(`Exp`, barX, barY - 1);
 
             this.ctx.fillStyle = '#444';
             this.ctx.fillRect(barX + 30, barY - 9, barW, barH);
@@ -365,7 +365,7 @@ class Game {
 
             this.ctx.fillStyle = '#aaa';
             this.ctx.font = '10px "Segoe UI"';
-            this.ctx.fillText(`${this.player.exp}/${this.player.expToNextLevel}`, barX + 30 + barW + 4, barY);
+            this.ctx.fillText(`${this.player.exp}/${this.player.expToNextLevel}  Lv.${this.player.level}`, barX + 30 + barW + 4, barY);
         }
 
         // 必殺技ゲージの描画
