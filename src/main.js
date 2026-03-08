@@ -218,10 +218,6 @@ class Game {
                 if (leveledUp) {
                     this.onLevelUp();
                 }
-                // アイテムドロップ（確率）
-                if (Math.random() < 0.2) {
-                    this.items.push(new Item(collisionResult.brick.x, collisionResult.brick.y, ITEM_TYPES.EXPAND));
-                }
             }
             
             if (this.levelManager.areAllBricksCleared() && !this.gameWin) {
