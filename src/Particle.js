@@ -22,9 +22,8 @@ export class Particle {
     draw(ctx) {
         ctx.globalAlpha = this.life;
         ctx.fillStyle = this.color;
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-        ctx.fill();
+        // 円(arc)から四角(fillRect)に変更して描画を高速化
+        ctx.fillRect(this.x - this.size/2, this.y - this.size/2, this.size, this.size);
         ctx.globalAlpha = 1.0;
     }
 }

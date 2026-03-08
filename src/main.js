@@ -32,6 +32,7 @@ class Game {
         this.isFadingOut = false;
         this.speedMultiplier = 1.0; // ボールのスピード倍率
         this.specialGauge = 0; // 必殺技ゲージ
+        this.lastSETime = 0; // SE再生の連打制限用
         this.lastLaserTime = 0; // 前回のレーザー発射時刻
 
         // BGMの設定（ベースパス対応のため相対パスに修正）
@@ -401,6 +402,10 @@ class Game {
     }
 
     playHitSE() {
+        const now = Date.now();
+        if (now - this.lastSETime < 40) return; // 40ms以内の連打は無視して負荷軽減
+        this.lastSETime = now;
+
         // プールから再生中でない（または終了した）SEを探す
         const se = this.hitSEPool.find(audio => audio.paused || audio.ended);
         if (se) {

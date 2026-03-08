@@ -28,41 +28,14 @@ class Laser {
         // パルスによる幅の変動
         const pulseWidth = this.width * (0.8 + Math.sin(this.pulse) * 0.2);
         
-        // 外側の大きな光彩
-        ctx.shadowBlur = 30;
-        ctx.shadowColor = '#00ffff';
-        
-        // 1. 最外周の淡い光
-        const gradOuter = ctx.createLinearGradient(this.x - pulseWidth, 0, this.x + pulseWidth, 0);
-        gradOuter.addColorStop(0, 'rgba(0, 255, 255, 0)');
-        gradOuter.addColorStop(0.5, 'rgba(0, 255, 255, 0.3)');
-        gradOuter.addColorStop(1, 'rgba(0, 255, 255, 0)');
-        ctx.fillStyle = gradOuter;
-        ctx.fillRect(this.x - pulseWidth, 0, pulseWidth * 2, this.startY);
-
-        // 2. メインの光線
-        const gradMain = ctx.createLinearGradient(this.x - pulseWidth/2, 0, this.x + pulseWidth/2, 0);
-        gradMain.addColorStop(0, 'rgba(0, 255, 255, 0.2)');
-        gradMain.addColorStop(0.5, 'rgba(255, 255, 255, 0.9)');
-        gradMain.addColorStop(1, 'rgba(0, 255, 255, 0.2)');
-        ctx.fillStyle = gradMain;
+        // メインの光線
+        ctx.fillStyle = 'rgba(0, 255, 255, 0.4)';
         ctx.fillRect(this.x - pulseWidth/2, 0, pulseWidth, this.startY);
 
-        // 3. 中心部の鋭い芯（エネルギーの核）
-        const coreWidth = pulseWidth * 0.2;
-        ctx.shadowBlur = 10;
-        ctx.shadowColor = '#ffffff';
+        // 中心部の芯
         ctx.fillStyle = '#fff';
-        ctx.fillRect(this.x - coreWidth/2, 0, coreWidth, this.startY);
+        ctx.fillRect(this.x - pulseWidth * 0.1, 0, pulseWidth * 0.2, this.startY);
         
-        // 根元（パドルとの接点）のスパーク
-        if (Math.random() > 0.5) {
-            ctx.beginPath();
-            ctx.arc(this.x, this.startY, pulseWidth, 0, Math.PI * 2);
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-            ctx.fill();
-        }
-
         ctx.restore();
     }
 }
@@ -96,12 +69,7 @@ class DamageText {
         ctx.font = `bold ${this.fontSize}px "Segoe UI"`;
         ctx.textAlign = 'center';
 
-        // 縁取り（視認性向上）
-        ctx.strokeStyle = '#000000';
-        ctx.lineWidth = 3;
-        ctx.strokeText(this.text, this.x, this.y);
-
-        // メインのテキスト
+        // メインのテキスト（縁取りを廃止して軽量化）
         ctx.fillStyle = this.color;
         ctx.fillText(this.text, this.x, this.y);
         
@@ -116,7 +84,7 @@ export class EffectManager {
         this.lasers = [];
     }
 
-    createExplosion(x, y, count = 10) {
+    createExplosion(x, y, count = 6) { // 10から6に削減
         for (let i = 0; i < count; i++) {
             this.particles.push(new Particle(x, y));
         }
