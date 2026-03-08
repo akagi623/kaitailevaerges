@@ -41,6 +41,13 @@ class Game {
         this.selectedStat = null;    // 選択したステータス ('attack'/'speed'/'defense')
         this.paused = false;         // 一時停止フラグ
 
+        // チュートリアル関連
+        this.tutorialState = 0;      // 0:なし, 1:初回, 2:初リポップ, 3:初イシュー
+        this.hasShownIntro = false;
+        this.hasShownRespawn = false;
+        this.hasShownIssue = false;
+        this.tutorialTargetBrick = null;
+
         // Web Audio API（SE用）
         this.audioCtx = null;    // ユーザー操作後に初期化
         this.hitSEBuffer = null; // ヒットSE
@@ -138,6 +145,10 @@ class Game {
                     startHandler(e);
                     break;
                 } else if (this.gameStarted && !this.gameOver && !this.gameWin) {
+                    if (this.tutorialState > 0) {
+                        this.tutorialState = 0; // タップでチュートリアル閉じる
+                        return;
+                    }
                     if (this.paused) {
                         // ポーズ画面のタッチ（再開ボタンなど）
                         this.handlePauseTouch(canvasX, canvasY);
@@ -175,19 +186,49 @@ class Game {
                 this.fireLaser();
             }
             if (e.code === 'Escape' && this.gameStarted && !this.gameOver && !this.gameWin && !this.levelingUp) {
-                this.paused = !this.paused;
+                if (this.tutorialState > 0) {
+                    this.tutorialState = 0; // ESCでも閉じる
+                } else {
+                    this.paused = !this.paused;
+                }
             }
         });
     }
 
+    showTutorial(step, brick = null) {
+        this.tutorialState = step;
+        this.tutorialTargetBrick = brick;
+    }
+
     update(deltaTime) {
         if (!this.gameStarted || this.gameOver || this.gameWin || Date.now() < this.entranceEndTime) return;
+        
+        // チュートリアル初回表示
+        if (!this.hasShownIntro) {
+            this.hasShownIntro = true;
+            this.showTutorial(1);
+        }
+        
+        if (this.tutorialState > 0) return; // チュートリアル中は停止
         if (this.levelingUp || this.paused) return; // レベルアップ・ポーズ中は停止
 
         this.paddle.update();
         this.ball.update();
         this.effectManager.update();
-        this.levelManager.update(deltaTime);
+        this.levelManager.update(deltaTime, 
+            (brick) => {
+                if (!this.hasShownRespawn) {
+                    this.hasShownRespawn = true;
+                    this.showTutorial(2, brick);
+                }
+            },
+            (brick) => {
+                if (!this.hasShownIssue) {
+                    this.hasShownIssue = true;
+                    this.showTutorial(3, brick);
+                }
+            }
+        );
         
         // コンボとプレイヤー攻撃力に応じたダメージ計算
         const currentDamage = Math.floor(this.player.attack * Math.pow(1.5, Math.max(0, this.combo)));
@@ -416,6 +457,12 @@ class Game {
             this.ctx.font = 'bold 56px "Segoe UI"';
             this.ctx.textAlign = 'center';
             this.ctx.fillText('現場入場！', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2);
+            return;
+        }
+
+        // チュートリアル画面
+        if (this.tutorialState > 0) {
+            this.drawTutorialOverlay();
             return;
         }
 
@@ -799,6 +846,90 @@ class Game {
         this.draw();
 
         requestAnimationFrame((t) => this.loop(t));
+    }
+
+    drawTutorialOverlay() {
+        if (this.tutorialState === 0) return;
+
+        // 半透明背景
+        this.ctx.fillStyle = 'rgba(0,0,0,0.75)';
+        this.ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+        // ハイライト枠の描画設定
+        this.ctx.strokeStyle = '#ffeb3b'; // 黄色
+        this.ctx.lineWidth = 4;
+        this.ctx.setLineDash([10, 5]);
+
+        if (this.tutorialState === 1) {
+            // LEVERAGE
+            this.ctx.strokeRect(CANVAS_WIDTH/2 - 100, 30, 200, 40);
+            // EXP bar
+            this.ctx.strokeRect(10, 80, 250, 35);
+            // Special Gauge (左下)
+            this.ctx.strokeRect(10, CANVAS_HEIGHT - 60, 140, 50);
+        } else if (this.tutorialState === 2 || this.tutorialState === 3) {
+            if (this.tutorialTargetBrick) {
+                const b = this.tutorialTargetBrick;
+                this.ctx.strokeRect(b.x - 5, b.y - 5, b.width + 10, b.height + 10);
+            }
+        }
+        this.ctx.setLineDash([]);
+
+        // セリフボックス (下部)
+        const boxX = 20;
+        const boxY = CANVAS_HEIGHT - 220;
+        const boxW = CANVAS_WIDTH - 40;
+        const boxH = 150;
+
+        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+        this.ctx.beginPath();
+        this.ctx.roundRect(boxX, boxY, boxW, boxH, 10);
+        this.ctx.fill();
+
+        // 親方アイコン文字 (背景に対して少し上に飛び出させる)
+        this.ctx.fillStyle = '#fff';
+        this.ctx.beginPath();
+        this.ctx.arc(boxX + 30, boxY - 10, 30, 0, Math.PI * 2);
+        this.ctx.fill();
+        this.ctx.font = '45px "Segoe UI"';
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText('👷', boxX + 30, boxY + 5);
+
+        // セリフ描画
+        this.ctx.fillStyle = '#111';
+        this.ctx.font = 'bold 15px "Segoe UI"';
+        this.ctx.textAlign = 'left';
+        
+        let textLines = [];
+        if (this.tutorialState === 1) {
+            textLines = [
+                "おう新人！現場に入ったらまずはブロックを叩き割れ！",
+                "連続で当て続ければ【LEVERAGE】でダメージ倍増だ！",
+                "壊せば【経験値】が貯まる。ゲージが満タンになったら",
+                "左下の【FIRE!】をタップして必殺技をブチかませ！",
+                "                 (画面をタップして次へ)"
+            ];
+        } else if (this.tutorialState === 2) {
+            textLines = [
+                "おっと、油断するなよ！この現場のブロックは、",
+                "【HPがゼロになって壊れても】",
+                "時間が経てば【復活】しちまうぞ！",
+                "早えとこカタをつけねぇとな！",
+                "                 (画面をタップして次へ)"
+            ];
+        } else if (this.tutorialState === 3) {
+            textLines = [
+                "出たな！あいつが今回のデカブツ……",
+                "【イシューブロック】だ！",
+                "普通の攻撃じゃ1ダメージしか通らねぇし、必殺技も無効だ。",
+                "だが、あれさえぶっ壊せばこの現場は【クリア】だ！",
+                "                 (画面をタップして次へ)"
+            ];
+        }
+
+        for (let i = 0; i < textLines.length; i++) {
+            this.ctx.fillText(textLines[i], boxX + 15, boxY + 35 + i * 22);
+        }
     }
 }
 

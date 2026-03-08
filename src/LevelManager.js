@@ -65,14 +65,22 @@ export class LevelManager {
         return { hit: false };
     }
 
-    update(deltaTime) {
+    update(deltaTime, onRespawn, onIssueSpawn) {
         for (let brick of this.bricks) {
             brick.update(deltaTime, (respawnedBrick) => {
+                let isIssueSpawn = false;
                 if (!this.issueSpawned && respawnedBrick.isCenterTarget) {
                     this.issueSpawned = true;
                     respawnedBrick.isIssue = true;
                     respawnedBrick.hp = ISSUE_BRICK_HP;
                     respawnedBrick.maxHp = ISSUE_BRICK_HP;
+                    isIssueSpawn = true;
+                }
+                
+                if (isIssueSpawn && onIssueSpawn) {
+                    onIssueSpawn(respawnedBrick);
+                } else if (onRespawn && !isIssueSpawn) {
+                    onRespawn(respawnedBrick);
                 }
             });
         }
