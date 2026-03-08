@@ -8,14 +8,50 @@ import { Player } from './Player.js';
 
 class Game {
     constructor() {
-        this.canvas = document.getElementById('gameCanvas');
-        this.ctx = this.canvas.getContext('2d');
-        
-        this.lastTime = 0;
         this.init();
     }
 
     init() {
+        // --- 一回限りの初期化 ---
+        this.canvas = document.getElementById('gameCanvas');
+        this.ctx = this.canvas.getContext('2d');
+        
+        // 画像の読み込み
+        this.topImage = new Image();
+        this.topImage.src = 'TOP.png';
+        this.yasuImage = new Image();
+        this.yasuImage.src = 'chara_1_icon.png';
+        this.oyakataImage = new Image();
+        this.oyakataImage.src = 'chara_2_icon.png';
+
+        // BGMの設定
+        this.bgm = new Audio('BURNING ADRENALINE.mp3');
+        this.bgm.loop = true;
+        this.bgm.volume = 0.5;
+        this.bgm.autoplay = false;
+
+        // 音声コンテキスト保持用
+        this.audioCtx = null;
+        this.hitSEBuffer = null;
+        this.winSEBuffer = null;
+        this.loseSEBuffer = null;
+        this.laserSEBuffer = null;
+        this.paddleStretchSEBuffer = null;
+        this.levelupSEBuffer = null;
+
+        // リスナー登録
+        this.setupStartListener();
+        
+        // ゲーム変数リセット
+        this.resetGameStatus();
+        
+        // ループ開始
+        this.lastTime = 0;
+        this.loop(0);
+    }
+
+    // ゲーム変数（ステータス）の初期化
+    resetGameStatus() {
         this.player = new Player();
         this.paddle = new Paddle(this.player.defense);
         this.ball = new Ball(CANVAS_WIDTH / 2, CANVAS_HEIGHT - 50, BALL_INITIAL_SPEED, -BALL_INITIAL_SPEED);
@@ -25,58 +61,31 @@ class Game {
         
         this.score = 0;
         this.lives = 3;
-        this.destroyedBricksCount = 0; // 破壊したブロックの数
-        this.clearBonus = 5000;      // クリア報酬
-        this.bonusAdded = false;     // ボーナス加算済みフラグ
+        this.destroyedBricksCount = 0;
+        this.clearBonus = 5000;
+        this.bonusAdded = false;
         this.gameOver = false;
         this.gameWin = false;
         this.gameStarted = false;
-        this.gameState = GAME_STATE.TITLE; // 初期状態：タイトル画面
-        this.entranceEndTime = 0; // 「現場入場！」フラッシュ終了時刻
+        this.gameState = GAME_STATE.TITLE;
+        this.entranceEndTime = 0;
         this.combo = 0;
-        this.lastCombo = 0; // 直近のコンボ数を保持
+        this.lastCombo = 0;
         this.baseDamage = 10;
         this.isFadingOut = false;
         this.speedMultiplier = 1.0;
         this.specialGauge = 0;
         this.lastSETime = 0;
         this.lastLaserTime = 0;
-        this.levelingUp = false;     // レベルアップ中フラグ
-        this.selectedStat = null;    // 選択したステータス ('attack'/'speed'/'defense')
-        this.paused = false;         // 一時停止フラグ
+        this.levelingUp = false;
+        this.selectedStat = null;
+        this.paused = false;
 
-        // チュートリアル関連
-        this.tutorialState = 0;      // 0:なし, 1:初回, 2:初リポップ, 3:初コア
+        this.tutorialState = 0;
         this.hasShownIntro = false;
         this.hasShownRespawn = false;
         this.hasShownIssue = false;
         this.tutorialTargetBrick = null;
-
-        // 画像の読み込み
-        this.topImage = new Image();
-        this.topImage.src = 'TOP.png';
-        this.yasuImage = new Image();
-        this.yasuImage.src = 'chara_1_icon.png';
-        this.oyakataImage = new Image();
-        this.oyakataImage.src = 'chara_2_icon.png';
-
-        // Web Audio API（SE用）
-        this.audioCtx = null;    // ユーザー操作後に初期化
-        this.hitSEBuffer = null; // ヒットSE
-        this.winSEBuffer = null; // クリアSE
-        this.loseSEBuffer = null; // ゲームオーバーSE
-        this.laserSEBuffer = null; // 必殺技発射SE
-        this.paddleStretchSEBuffer = null; // パドル伸長アイテムSE
-        this.levelupSEBuffer = null; // レベルアップSE
-
-        // BGM（長い曲は streaming の HTMLAudio で再生）
-        this.bgm = new Audio('BURNING ADRENALINE.mp3');
-        this.bgm.loop = true;
-        this.bgm.volume = 0.5;
-        this.bgm.autoplay = false; // 明示的に無効化
-
-        this.setupStartListener();
-        this.loop(0);
     }
 
     setupStartListener() {
@@ -97,30 +106,23 @@ class Game {
                     this.gameState = GAME_STATE.CHAR_SELECT;
                 }
             } else if (this.gameState === GAME_STATE.CHAR_SELECT) {
-                // キャラクター選択（ヤス：中央の選択ボタン）
-                // 判定を拡大（左右±100px程度余裕を持たせる）
                 const btnX = CANVAS_WIDTH / 2 - 120;
                 const btnY = CANVAS_HEIGHT / 2 + 140;
                 if (canvasX > btnX && canvasX < btnX + 240 && canvasY > btnY && canvasY < btnY + 70) {
                     this.gameState = GAME_STATE.STAGE_SELECT;
                 }
             } else if (this.gameState === GAME_STATE.STAGE_SELECT) {
-                // ステージ選択
                 const btnX = 50;
                 const s1Y = 150;
                 const s2Y = 250;
                 const btnW = 350, btnH = 80;
-
-                // Stage 1：池袋
                 if (canvasX > btnX && canvasX < btnX + btnW && canvasY > s1Y && canvasY < s1Y + btnH) {
                     this.startGame(STAGE_ID.IKEBUKURO);
                 }
-                // Stage 2：渋谷
                 if (canvasX > btnX && canvasX < btnX + btnW && canvasY > s2Y && canvasY < s2Y + btnH) {
                     this.startGame(STAGE_ID.SHIBUYA);
                 }
             } else if (this.gameState === GAME_STATE.PLAYING) {
-                // ポーズ中・レベルアップ中・チュートリアル中は常に判定を優先
                 if (this.paused) {
                     this.handlePauseTouch(canvasX, canvasY);
                     return;
@@ -130,7 +132,6 @@ class Game {
                     return;
                 }
                 if (this.tutorialState > 0) {
-                    // チュートリアルのページ送り
                     if (this.tutorialState === 1.1) this.tutorialState = 1.2;
                     else if (this.tutorialState === 1.2) this.tutorialState = 0;
                     else if (this.tutorialState === 2.1) this.tutorialState = 0;
@@ -140,35 +141,23 @@ class Game {
                     return;
                 }
 
-                // ゲームオーバーまたはクリア時のボタン判定
                 if (this.gameOver || this.gameWin) {
                     const btnW = 200, btnH = 50, cx = CANVAS_WIDTH / 2;
                     const restartY = CANVAS_HEIGHT / 2 + 130;
                     const titleY = CANVAS_HEIGHT / 2 + 190;
-
-                    // Restart
                     if (canvasX > cx - 100 && canvasX < cx + 100 && canvasY > restartY && canvasY < restartY + btnH) {
-                        location.reload();
+                        this.restartCurrentStage();
                     }
-                    // Back to Title
                     if (canvasX > cx - 100 && canvasX < cx + 100 && canvasY > titleY && canvasY < titleY + btnH) {
-                        this.gameState = GAME_STATE.TITLE;
-                        this.gameWin = false;
-                        this.gameOver = false;
-                        this.gameStarted = false;
-                        // 他の状態リセットが必要な場合はここで行う（今回はreloadせずに戻る実装）
-                        location.reload(); // 確実にリセットするためreload推奨だが、要望に合わせて調整
+                        this.backToTitle();
                     }
                     return;
                 }
 
                 if (!this.gameOver && !this.gameWin) {
-                    // 入場フラッシュ時間を過ぎている場合のみ操作を受け付ける
                     if (Date.now() >= this.entranceEndTime) {
-                        // ⏸ ポーズボタン判定（右上）
                         if (canvasX > CANVAS_WIDTH - 50 && canvasY < 40) {
                             this.paused = true;
-                        // 必殺技ボタン判定（左下）
                         } else if (canvasX < 155 && canvasY > CANVAS_HEIGHT - 65) {
                             this.fireLaser();
                         }
@@ -185,8 +174,6 @@ class Game {
             for (const touch of e.changedTouches) {
                 handleCanvasInput(touch.clientX, touch.clientY);
             }
-
-            // スクロール防止用のY座標判定
             const firstTouch = e.changedTouches[0];
             if (firstTouch) {
                 const rect = this.canvas.getBoundingClientRect();
@@ -198,19 +185,31 @@ class Game {
             }
         }, { passive: false });
 
-        // スペースキーで必殺技 / ESCでポーズ
         window.addEventListener('keydown', (e) => {
             if (e.code === 'Space' && this.gameStarted && !this.gameOver && !this.gameWin && !this.paused) {
                 this.fireLaser();
             }
             if (e.code === 'Escape' && this.gameStarted && !this.gameOver && !this.gameWin && !this.levelingUp) {
                 if (this.tutorialState > 0) {
-                    this.tutorialState = 0; // ESCでも閉じる
+                    this.tutorialState = 0;
                 } else {
                     this.paused = !this.paused;
                 }
             }
         });
+    }
+
+    restartCurrentStage() {
+        const currentStageId = this.levelManager.currentStageId || STAGE_ID.IKEBUKURO;
+        this.stopBGM();
+        this.resetGameStatus();
+        this.startGame(currentStageId);
+    }
+
+    backToTitle() {
+        this.stopBGM();
+        this.resetGameStatus();
+        this.gameState = GAME_STATE.TITLE;
     }
 
     initAudio() {
@@ -229,25 +228,20 @@ class Game {
     }
 
     startGame(stageId = STAGE_ID.IKEBUKURO) {
-        // ステージに応じてプレイヤーのレベルを初期化（レベル1に戻る）
         if (stageId === STAGE_ID.SHIBUYA) {
-            this.player = new Player(); // レベル、ステータス、EXPをリセット
+            this.player = new Player();
             this.paddle.width = this.player.defense;
             this.paddle.speed = this.player.speed;
         }
-
-        // チュートリアルの無効化（池袋以外）
         if (stageId !== STAGE_ID.IKEBUKURO) {
             this.hasShownIntro = true;
             this.hasShownRespawn = true;
             this.hasShownIssue = true;
         } else {
-            // 池袋の場合は（リプレイ等のため）フラグをリセット
             this.hasShownIntro = false;
             this.hasShownRespawn = false;
             this.hasShownIssue = false;
         }
-
         this.levelManager.init(stageId);
         this.gameState = GAME_STATE.PLAYING;
         this.gameStarted = true;
@@ -258,6 +252,13 @@ class Game {
     showTutorial(step, brick = null) {
         this.tutorialState = step;
         this.tutorialTargetBrick = brick;
+    }
+
+    stopBGM() {
+        if (this.bgm) {
+            this.bgm.pause();
+            this.bgm.currentTime = 0;
+        }
     }
 
     update(deltaTime) {
