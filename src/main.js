@@ -311,11 +311,14 @@ class Game {
     draw() {
         this.ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
         
-        // 背景の描画
+        // 背景
         this.ctx.fillStyle = '#111';
         this.ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-        this.paddle.draw(this.ctx);
+        // 必殺技ゲージ（パドルより先に描画して後支になるように）
+        this.drawSpecialGauge();
+
+        this.paddle.draw(this.ctx); // ゲージより前面
         this.ball.draw(this.ctx);
         this.levelManager.draw(this.ctx);
         this.effectManager.draw(this.ctx);
@@ -364,36 +367,35 @@ class Game {
         if (displayCombo > 0) {
             const label = displayCombo >= 2 ? 'LEVERAGES!' : 'LEVERAGE!';
             this.ctx.fillStyle = this.combo > 0 ? '#ffeb3b' : '#9e9e9e';
-            this.ctx.font = 'bold 22px "Segoe UI"';
+            this.ctx.font = 'bold 28px "Segoe UI"'; // 大きく
             this.ctx.textAlign = 'center';
-            this.ctx.fillText(`${displayCombo} ${label}`, CANVAS_WIDTH / 2, 58);
+            this.ctx.fillText(`${displayCombo} ${label}`, CANVAS_WIDTH / 2, 60);
         }
 
         // 3行目: EXPバー（左 Lv表示 + ゲージ）
         if (this.gameStarted) {
             const barX = 15;
-            const barY = 88; // LEVERAGE!（y=58）の下にスペース
+            const barY = 96;
             const barW = 160;
-            const barH = 10;
+            const barH = 14; // 大きめ
 
             this.ctx.fillStyle = '#fff';
-            this.ctx.font = 'bold 12px "Segoe UI"';
+            this.ctx.font = 'bold 15px "Segoe UI"'; // 大きめ
             this.ctx.textAlign = 'left';
             this.ctx.fillText(`Exp`, barX, barY - 1);
 
             this.ctx.fillStyle = '#444';
-            this.ctx.fillRect(barX + 30, barY - 9, barW, barH);
+            this.ctx.fillRect(barX + 30, barY - 12, barW, barH);
 
             this.ctx.fillStyle = '#76ff03';
-            this.ctx.fillRect(barX + 30, barY - 9, barW * this.player.expRatio, barH);
+            this.ctx.fillRect(barX + 30, barY - 12, barW * this.player.expRatio, barH);
 
-            this.ctx.fillStyle = '#aaa';
-            this.ctx.font = '10px "Segoe UI"';
+            this.ctx.fillStyle = '#ccc';
+            this.ctx.font = '13px "Segoe UI"'; // 大きめ
             this.ctx.fillText(`${this.player.exp}/${this.player.expToNextLevel}  Lv.${this.player.level}`, barX + 30 + barW + 4, barY);
         }
 
-        // 必殺技ゲージの描画
-        this.drawSpecialGauge();
+        // 必殺技ゲージは draw()内で描画済み（パドルの後本になるためここでは非募務）
 
         // 現場入場！フラッシュ
         if (this.gameStarted && Date.now() < this.entranceEndTime) {
