@@ -18,7 +18,7 @@ export const PADDLE_WIDTH = 80;
 export const PADDLE_HEIGHT = 15;
 export const PADDLE_SPEED = 8;
 
-export const BRICK_ROWS = 12;
+export const BRICK_ROWS = 8;
 export const BRICK_COLS = 6;
 export const BRICK_WIDTH = 60;
 export const BRICK_HEIGHT = 20;

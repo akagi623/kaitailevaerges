@@ -236,6 +236,7 @@ class Game {
             this.combo = 0; // コンボリセット（lastComboは保持される）
             if (this.lives <= 0 && !this.gameOver) {
                 this.gameOver = true;
+                this.bgm.volume = 0.1; // SEが聞こえやすいように即座に音量を下げる
                 this.loseSE.play().catch(e => console.error("Lose SE failed:", e));
                 this.fadeOutBGM();
             } else {
@@ -440,15 +441,15 @@ class Game {
         
         const fadeInterval = setInterval(() => {
             if (this.bgm.volume > 0.05) {
-                this.bgm.volume -= 0.05;
+                this.bgm.volume -= 0.1; // 減少量を増やして速める
             } else {
                 this.bgm.volume = 0;
                 this.bgm.pause();
-                this.bgm.currentTime = 0; // 最初に戻す
+                this.bgm.currentTime = 0;
                 clearInterval(fadeInterval);
-                this.isFadingOut = false; // フラグをリセット
+                this.isFadingOut = false;
             }
-        }, 100);
+        }, 50); // インターバルを短くして（100ms→50ms）さらに速める
 
         // 念のため一定時間後に強制停止
         setTimeout(() => {
