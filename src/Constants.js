@@ -43,7 +43,8 @@ export const GAME_STATE = {
     CHAR_SELECT: 'CHAR_SELECT',
     STAGE_SELECT: 'STAGE_SELECT',
     PLAYING: 'PLAYING',
-    RESULT: 'RESULT'
+    RESULT: 'RESULT',
+    SHOP: 'SHOP'
 };
 
 export const STAGE_ID = {
@@ -63,3 +64,38 @@ export const STAGE_CONFIG = {
         difficulty: 2
     }
 };
+
+export const EQUIPMENT_DATA = [
+    {
+        id: 'crowbar',
+        name: 'バール',
+        description: '基本の解体道具。攻撃力+5',
+        price: 300,
+        attackBoost: 5,
+        color: '#90a4ae'
+    },
+    {
+        id: 'hammer',
+        name: 'ハンマー',
+        description: '重厚な一撃。攻撃力+15',
+        price: 1000,
+        attackBoost: 15,
+        color: '#795548'
+    },
+    {
+        id: 'sabersaw',
+        name: 'セーバーソー',
+        description: '電動の切れ味。攻撃力+40',
+        price: 3500,
+        attackBoost: 40,
+        color: '#ff5722'
+    },
+    {
+        id: 'excavator',
+        name: 'ショベルカー',
+        description: '重機は全てを破壊する。攻撃力+100',
+        price: 15000,
+        attackBoost: 100,
+        color: '#ffc107'
+    }
+];

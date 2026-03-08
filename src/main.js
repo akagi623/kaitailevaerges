@@ -111,6 +111,15 @@ class Game {
                 if (canvasX > btnX && canvasX < btnX + 240 && canvasY > btnY && canvasY < btnY + 70) {
                     this.gameState = GAME_STATE.STAGE_SELECT;
                 }
+                
+                // プロショップボタン
+                const shopBtnX = CANVAS_WIDTH / 2 - 80;
+                const shopBtnY = CANVAS_HEIGHT - 80;
+                if (canvasX > shopBtnX && canvasX < shopBtnX + 160 && canvasY > shopBtnY && canvasY < shopBtnY + 50) {
+                    this.gameState = GAME_STATE.SHOP;
+                }
+            } else if (this.gameState === GAME_STATE.SHOP) {
+                this.handleShopTouch(canvasX, canvasY);
             } else if (this.gameState === GAME_STATE.STAGE_SELECT) {
                 const btnX = 50;
                 const s1Y = 150;
@@ -297,7 +306,7 @@ class Game {
         );
         
         // コンボとプレイヤー攻撃力に応じたダメージ計算
-        const currentDamage = Math.floor(this.player.attack * Math.pow(1.5, Math.max(0, this.combo)));
+        const currentDamage = Math.floor(this.player.getTotalAttack(EQUIPMENT_DATA) * Math.pow(1.5, Math.max(0, this.combo)));
 
         // ブロックとの衝突判定
         const collisionResult = this.levelManager.checkCollision(this.ball, currentDamage);
@@ -468,6 +477,8 @@ class Game {
             this.drawCharSelectScreen();
         } else if (this.gameState === GAME_STATE.STAGE_SELECT) {
             this.drawStageSelectScreen();
+        } else if (this.gameState === GAME_STATE.SHOP) {
+            this.drawShopScreen();
         } else {
             // 背景
             this.ctx.fillStyle = '#111';
@@ -1273,6 +1284,234 @@ class Game {
         ctx.textBaseline = 'middle';
         ctx.fillText(this.yasuImage.complete ? '選択' : 'Loading...', CANVAS_WIDTH / 2, btnY + btnH / 2);
         ctx.textBaseline = 'alphabetic';
+
+        // プロショップボタン
+        const shopBtnW = 160, shopBtnH = 45;
+        const shopBtnX = CANVAS_WIDTH / 2 - shopBtnW / 2;
+        const shopBtnY = CANVAS_HEIGHT - 80;
+        ctx.fillStyle = '#ff9800';
+        ctx.beginPath();
+        ctx.roundRect(shopBtnX, shopBtnY, shopBtnW, shopBtnH, 10);
+        ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 18px "Segoe UI"';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('🛒 プロショップ', CANVAS_WIDTH / 2, shopBtnY + shopBtnH / 2);
+        ctx.textBaseline = 'alphabetic';
+    }
+
+    drawShopScreen() {
+        const ctx = this.ctx;
+        ctx.fillStyle = '#111';
+        ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 28px "Segoe UI"';
+        ctx.textAlign = 'center';
+        ctx.fillText('プロショップ', CANVAS_WIDTH / 2, 60);
+
+        ctx.fillStyle = '#ffdf00';
+        ctx.font = 'bold 20px "Segoe UI"';
+        ctx.textAlign = 'right';
+        ctx.fillText(`所持金: ¥${this.player.money.toLocaleString()}`, CANVAS_WIDTH - 20, 100);
+
+        // アイテムリスト
+        EQUIPMENT_DATA.forEach((item, i) => {
+            const itemY = 130 + i * 110;
+            const itemX = 20;
+            const itemW = CANVAS_WIDTH - 40;
+            const itemH = 100;
+
+            const isOwned = this.player.ownedEquipment.includes(item.id);
+            const isEquipped = this.player.equippedId === item.id;
+
+            ctx.fillStyle = isEquipped ? 'rgba(76, 175, 80, 0.2)' : 'rgba(255, 255, 255, 0.05)';
+            ctx.strokeStyle = isEquipped ? '#4caf50' : '#444';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.roundRect(itemX, itemY, itemW, itemH, 15);
+            ctx.fill();
+            ctx.stroke();
+
+            // アイコン描画
+            this.drawEquipmentIcon(item.id, itemX + 50, itemY + 50, item.color);
+
+            // テキスト
+            ctx.textAlign = 'left';
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 20px "Segoe UI"';
+            ctx.fillText(item.name, itemX + 100, itemY + 35);
+
+            ctx.fillStyle = '#aaa';
+            ctx.font = '14px "Segoe UI"';
+            ctx.fillText(item.description, itemX + 100, itemY + 60);
+
+            // 購入・装備ボタン
+            const btnW = 100, btnH = 40;
+            const btnX = itemX + itemW - 120, btnY = itemY + 30;
+            
+            if (isEquipped) {
+                ctx.fillStyle = '#4caf50';
+                ctx.beginPath();
+                ctx.roundRect(btnX, btnY, btnW, btnH, 8);
+                ctx.fill();
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 16px "Segoe UI"';
+                ctx.textAlign = 'center';
+                ctx.fillText('装備中', btnX + btnW/2, btnY + btnH/2 + 6);
+            } else if (isOwned) {
+                ctx.fillStyle = '#2196f3';
+                ctx.beginPath();
+                ctx.roundRect(btnX, btnY, btnW, btnH, 8);
+                ctx.fill();
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 16px "Segoe UI"';
+                ctx.textAlign = 'center';
+                ctx.fillText('装備する', btnX + btnW/2, btnY + btnH/2 + 6);
+            } else {
+                const canBuy = this.player.money >= item.price;
+                ctx.fillStyle = canBuy ? '#ff9800' : '#444';
+                ctx.beginPath();
+                ctx.roundRect(btnX, btnY, btnW, btnH, 8);
+                ctx.fill();
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 16px "Segoe UI"';
+                ctx.textAlign = 'center';
+                ctx.fillText(`¥${item.price.toLocaleString()}`, btnX + btnW/2, btnY + btnH/2 + 6);
+            }
+        });
+
+        // 戻るボタン
+        const backY = CANVAS_HEIGHT - 70;
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+        ctx.beginPath();
+        ctx.roundRect(CANVAS_WIDTH/2 - 60, backY, 120, 45, 10);
+        ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 18px "Segoe UI"';
+        ctx.textAlign = 'center';
+        ctx.fillText('戻る', CANVAS_WIDTH/2, backY + 28);
+    }
+
+    handleShopTouch(canvasX, canvasY) {
+        // アイテムボタン判定
+        EQUIPMENT_DATA.forEach((item, i) => {
+            const itemY = 130 + i * 110;
+            const btnX = CANVAS_WIDTH - 140, btnY = itemY + 30;
+            const btnW = 100, btnH = 40;
+
+            if (canvasX > btnX && canvasX < btnX + btnW && canvasY > btnY && canvasY < btnY + btnH) {
+                const isOwned = this.player.ownedEquipment.includes(item.id);
+                if (isOwned) {
+                    this.player.equippedId = item.id;
+                } else if (this.player.money >= item.price) {
+                    this.player.money -= item.price;
+                    this.player.ownedEquipment.push(item.id);
+                    this.player.equippedId = item.id;
+                    // 購入SEがあれば再生
+                    if (this.audioCtx) {
+                        const osc = this.audioCtx.createOscillator();
+                        const gain = this.audioCtx.createGain();
+                        osc.frequency.setValueAtTime(523.25, this.audioCtx.currentTime); // C5
+                        osc.frequency.exponentialRampToValueAtTime(1046.5, this.audioCtx.currentTime + 0.1); // C6
+                        gain.gain.setValueAtTime(0.5, this.audioCtx.currentTime);
+                        gain.gain.exponentialRampToValueAtTime(0.01, this.audioCtx.currentTime + 0.2);
+                        osc.connect(gain);
+                        gain.connect(this.audioCtx.destination);
+                        osc.start();
+                        osc.stop(this.audioCtx.currentTime + 0.2);
+                    }
+                }
+            }
+        });
+
+        // 戻るボタン
+        const backY = CANVAS_HEIGHT - 70;
+        if (canvasX > CANVAS_WIDTH/2 - 60 && canvasX < CANVAS_WIDTH/2 + 60 && canvasY > backY && canvasY < backY + 45) {
+            this.gameState = GAME_STATE.CHAR_SELECT;
+        }
+    }
+
+    drawEquipmentIcon(id, x, y, color) {
+        const ctx = this.ctx;
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.strokeStyle = color;
+        ctx.fillStyle = color;
+        ctx.lineWidth = 3;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+
+        if (id === 'crowbar') {
+            // バール
+            ctx.beginPath();
+            ctx.moveTo(-15, 20);
+            ctx.lineTo(15, -15);
+            ctx.quadraticCurveTo(20, -20, 25, -15); // フック部分
+            ctx.stroke();
+            // 先端の割れ目イメージ
+            ctx.beginPath();
+            ctx.moveTo(-15, 20);
+            ctx.lineTo(-18, 25);
+            ctx.moveTo(-15, 20);
+            ctx.lineTo(-12, 25);
+            ctx.stroke();
+        } else if (id === 'hammer') {
+            // ハンマー
+            ctx.beginPath();
+            ctx.fillStyle = '#888';
+            ctx.roundRect(-20, -15, 40, 20, 3);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.strokeStyle = '#795548';
+            ctx.lineWidth = 6;
+            ctx.moveTo(0, 5);
+            ctx.lineTo(0, 25);
+            ctx.stroke();
+        } else if (id === 'sabersaw') {
+            // セーバーソー
+            ctx.beginPath();
+            ctx.fillStyle = '#ff5722';
+            ctx.roundRect(-20, -5, 30, 25, 5);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.strokeStyle = '#ddd';
+            ctx.lineWidth = 4;
+            ctx.moveTo(10, 5);
+            ctx.lineTo(30, 5);
+            ctx.stroke();
+            // 持ち手
+            ctx.beginPath();
+            ctx.strokeStyle = '#444';
+            ctx.lineWidth = 4;
+            ctx.moveTo(-15, 15);
+            ctx.lineTo(-25, 25);
+            ctx.stroke();
+        } else if (id === 'excavator') {
+            // ショベルカー（簡易）
+            ctx.beginPath();
+            ctx.fillStyle = '#ffc107';
+            ctx.roundRect(-20, 5, 30, 20, 3); // ボディ
+            ctx.fill();
+            ctx.beginPath();
+            ctx.strokeStyle = '#ffc107';
+            ctx.lineWidth = 5;
+            ctx.moveTo(0, 5);
+            ctx.lineTo(10, -10); // アーム1
+            ctx.lineTo(30, 0);   // アーム2
+            ctx.stroke();
+            // バケット
+            ctx.beginPath();
+            ctx.moveTo(30, 0);
+            ctx.lineTo(35, 10);
+            ctx.lineTo(25, 15);
+            ctx.stroke();
+            // キャタピラ
+            ctx.fillStyle = '#333';
+            ctx.fillRect(-22, 22, 34, 6);
+        }
+        ctx.restore();
     }
 
     drawStageSelectScreen() {
