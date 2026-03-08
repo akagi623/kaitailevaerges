@@ -176,7 +176,7 @@ class Game {
             if (this.levelManager.areAllBricksCleared() && !this.gameWin) {
                 this.gameWin = true;
                 this.winSE.play().catch(e => console.error("Win SE failed:", e));
-                this.fadeOutBGM();
+                this.stopBGM();
             }
         }
 
@@ -238,7 +238,7 @@ class Game {
                 this.gameOver = true;
                 this.bgm.volume = 0.1; // SEが聞こえやすいように即座に音量を下げる
                 this.loseSE.play().catch(e => console.error("Lose SE failed:", e));
-                this.fadeOutBGM();
+                this.stopBGM();
             } else {
                 // リセット
                 this.speedMultiplier = 1.0; // スピードリセット
@@ -408,7 +408,7 @@ class Game {
         if (this.levelManager.areAllBricksCleared()) {
             this.gameWin = true;
             this.winSE.play().catch(e => console.error("Win SE failed:", e));
-            this.fadeOutBGM();
+            this.stopBGM();
         }
     }
 
@@ -443,6 +443,13 @@ class Game {
         const ratio = newSpeed / currentSpeed;
         this.ball.dx *= ratio;
         this.ball.dy *= ratio;
+    }
+
+    stopBGM() {
+        this.bgm.pause();
+        this.bgm.volume = 0;
+        this.bgm.currentTime = 0;
+        this.isFadingOut = false;
     }
 
     fadeOutBGM() {
