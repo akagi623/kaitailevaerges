@@ -898,9 +898,9 @@ class Game {
         this.ctx.fill();
 
         // 親方アイコン (画像があれば画像、なければ絵文字)
-        const iconSize = 60;
-        const iconX = boxX + 40;
-        const iconY = boxY - 20;
+        const iconSize = 110;
+        const iconX = boxX + 60;
+        const iconY = boxY - 40;
         
         // 白背景（フチ）
         this.ctx.fillStyle = '#fff';
@@ -916,9 +916,9 @@ class Game {
             this.ctx.drawImage(this.oyakataImage, iconX - iconSize/2, iconY - 5, iconSize, iconSize);
             this.ctx.restore();
         } else {
-            this.ctx.font = '45px "Segoe UI"';
+            this.ctx.font = '70px "Segoe UI"';
             this.ctx.textAlign = 'center';
-            this.ctx.fillText('👷', iconX, iconY + 15);
+            this.ctx.fillText('👷', iconX, iconY + 30);
         }
 
         // セリフ描画

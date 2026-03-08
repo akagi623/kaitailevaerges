@@ -28,7 +28,7 @@ export const BRICK_OFFSET_LEFT = 23;
 
 export const SPECIAL_GAUGE_MAX = 100;
 export const GAUGE_CHARGE_PER_HIT = 2; // パドルorブロックヒットでの上昇量
-export const LASER_DAMAGE = 40;
+export const LASER_DAMAGE = 50;
 export const LASER_COOLDOWN = 1000;
 
 export const ISSUE_BRICK_HP = 5;
