@@ -1,4 +1,4 @@
-import { CANVAS_WIDTH, CANVAS_HEIGHT, BALL_INITIAL_SPEED, SPECIAL_GAUGE_MAX, GAUGE_CHARGE_PER_HIT, LASER_DAMAGE, MONEY_DROP_RATE, MAGNET_RADIUS, GAME_STATE, STAGE_ID, STAGE_CONFIG } from './Constants.js';
+import { CANVAS_WIDTH, CANVAS_HEIGHT, BALL_INITIAL_SPEED, SPECIAL_GAUGE_MAX, GAUGE_CHARGE_PER_HIT, LASER_DAMAGE, MONEY_DROP_RATE, MAGNET_RADIUS, GAME_STATE, STAGE_ID, STAGE_CONFIG, EQUIPMENT_DATA } from './Constants.js';
 import { Ball } from './Ball.js';
 import { Paddle } from './Paddle.js';
 import { LevelManager } from './LevelManager.js';
@@ -1389,15 +1389,24 @@ class Game {
         });
 
         // 戻るボタン
+        const backW = 140, backH = 45;
+        const backX = CANVAS_WIDTH / 2 - backW / 2;
         const backY = CANVAS_HEIGHT - 70;
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+        
+        ctx.fillStyle = '#444';
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.roundRect(CANVAS_WIDTH/2 - 60, backY, 120, 45, 10);
+        ctx.roundRect(backX, backY, backW, backH, 10);
         ctx.fill();
+        ctx.stroke();
+        
         ctx.fillStyle = '#fff';
         ctx.font = 'bold 18px "Segoe UI"';
         ctx.textAlign = 'center';
-        ctx.fillText('戻る', CANVAS_WIDTH/2, backY + 28);
+        ctx.textBaseline = 'middle';
+        ctx.fillText('戻る', CANVAS_WIDTH / 2, backY + backH / 2);
+        ctx.textBaseline = 'alphabetic';
     }
 
     handleShopTouch(canvasX, canvasY) {
@@ -1435,8 +1444,10 @@ class Game {
         });
 
         // 戻るボタン
+        const backW = 140, backH = 45;
+        const backX = CANVAS_WIDTH / 2 - backW / 2;
         const backY = CANVAS_HEIGHT - 70;
-        if (canvasX > CANVAS_WIDTH/2 - 60 && canvasX < CANVAS_WIDTH/2 + 60 && canvasY > backY && canvasY < backY + 45) {
+        if (canvasX > backX && canvasX < backX + backW && canvasY > backY && canvasY < backY + backH) {
             this.gameState = GAME_STATE.CHAR_SELECT;
         }
     }
