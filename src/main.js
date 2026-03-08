@@ -78,8 +78,8 @@ class Game {
                     const canvasX = (clientX - rect.left) * scaleX;
                     const canvasY = (clientY - rect.top) * scaleY;
                     
-                    // 必殺技ボタン判定（右下：x > 660, y > 540）
-                    if (canvasX > CANVAS_WIDTH - 140 && canvasY > CANVAS_HEIGHT - 60) {
+                    // 必殺技ボタン判定（左下：x < 155, y > CANVAS_HEIGHT - 65）
+                    if (canvasX < 155 && canvasY > CANVAS_HEIGHT - 65) {
                         this.fireLaser();
                     }
                 }
@@ -270,22 +270,32 @@ class Game {
         this.drawUI();
     }
 
-    drawUI() {
-        this.ctx.fillStyle = '#fff';
-        this.ctx.font = '18px "Segoe UI"';
-        this.ctx.textAlign = 'left';
-        this.ctx.fillText(`Score: ${this.score.toLocaleString()}`, 15, 25);
-        this.ctx.textAlign = 'right';
-        this.ctx.fillText(`Lives: ${this.lives}`, CANVAS_WIDTH - 15, 25);
+    formatScore(score) {
+        if (score >= 10000) {
+            const man = Math.floor(score / 10000);
+            const rest = score % 10000;
+            return rest > 0 ? `${man}万${rest}点` : `${man}万点`;
+        }
+        return `${score}点`;
+    }
 
-        // LEVERAGEの表示（コンボ中または直近の値を表示）
+    drawUI() {
+        // 1行目: Score（左）と Lives（右）
+        this.ctx.fillStyle = '#fff';
+        this.ctx.font = 'bold 18px "Segoe UI"';
+        this.ctx.textAlign = 'left';
+        this.ctx.fillText(`Score: ${this.formatScore(this.score)}`, 15, 28);
+        this.ctx.textAlign = 'right';
+        this.ctx.fillText(`Lives: ${this.lives}`, CANVAS_WIDTH - 15, 28);
+
+        // 2行目: LEVERAGEの表示（コンボ中または直近の値を表示）
         const displayCombo = this.combo > 0 ? this.combo : this.lastCombo;
         if (displayCombo > 0) {
             const label = displayCombo >= 2 ? 'LEVERAGES!' : 'LEVERAGE!';
-            this.ctx.fillStyle = this.combo > 0 ? '#ffeb3b' : '#9e9e9e'; 
-            this.ctx.font = 'bold 20px "Segoe UI"';
+            this.ctx.fillStyle = this.combo > 0 ? '#ffeb3b' : '#9e9e9e';
+            this.ctx.font = 'bold 16px "Segoe UI"';
             this.ctx.textAlign = 'center';
-            this.ctx.fillText(`${displayCombo} ${label}`, CANVAS_WIDTH / 2, 25);
+            this.ctx.fillText(`${displayCombo} ${label}`, CANVAS_WIDTH / 2, 50);
         }
 
         // 必殺技ゲージの描画
@@ -305,7 +315,9 @@ class Game {
         this.ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
         
         this.ctx.fillStyle = color;
-        this.ctx.font = 'bold 60px "Segoe UI"';
+        // フォントサイズを画面幅に合わせてスケール（スマホではみ出しを防止）
+        const fontSize = Math.min(52, Math.floor(CANVAS_WIDTH / 8));
+        this.ctx.font = `bold ${fontSize}px "Segoe UI"`;
         this.ctx.textAlign = 'center';
         this.ctx.fillText(text, CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2);
         
@@ -326,11 +338,10 @@ class Game {
     }
 
     drawSpecialGauge() {
-        const width = 140; // スマホで押しやすく少し大きく
+        const width = 140;
         const height = 50;
-        const x = CANVAS_WIDTH - width - 15;
+        const x = 15; // 左側に配置
         const y = CANVAS_HEIGHT - height - 15;
-        const fillWidth = (this.specialGauge / SPECIAL_GAUGE_MAX) * width;
 
         // ボタンの背景
         this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
@@ -357,7 +368,6 @@ class Game {
         this.ctx.fillText(this.specialGauge >= SPECIAL_GAUGE_MAX ? 'FIRE!' : 'SPECIAL', x + width / 2, y + height / 2 + 6);
 
         if (this.specialGauge >= SPECIAL_GAUGE_MAX) {
-            // 発光エフェクト（外枠が動く）
             this.ctx.strokeStyle = `rgba(0, 255, 255, ${0.5 + Math.sin(Date.now() * 0.01) * 0.5})`;
             this.ctx.lineWidth = 4;
             this.ctx.strokeRect(x - 2, y - 2, width + 4, height + 4);
