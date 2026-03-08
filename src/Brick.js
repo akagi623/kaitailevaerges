@@ -16,13 +16,13 @@ export class Brick {
 
     hit(amount = 1) {
         if (this.isIssue && amount > 0) {
-            amount = 1; // イシューブロックはコンボのダメージに関わらず1ダメージ
+            amount = 1; // コアブロックはコンボのダメージに関わらず1ダメージ
         }
         this.hp -= amount;
         if (this.hp <= 0) {
             this.hp = 0;
             this.active = false;
-            // 復活タイマーのセット（イシューブロック以外）
+            // 復活タイマーのセット（コアブロック以外）
             if (!this.isIssue) {
                 this.respawnTimer = this.isEdge ? RESPAWN_TIME_EDGE : RESPAWN_TIME_NORMAL;
             }

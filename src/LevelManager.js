@@ -20,7 +20,7 @@ export class LevelManager {
                 const brickX = (c * (BRICK_WIDTH + BRICK_PADDING)) + BRICK_OFFSET_LEFT;
                 const brickY = (r * (BRICK_HEIGHT + BRICK_PADDING)) + BRICK_OFFSET_TOP;
                 
-                // 初回はすべてイシューブロックではない
+                // 初回はすべてコアブロックではない
                 const isIssue = false;
                 const isEdge = (c === 0 || c === BRICK_COLS - 1);
                 
@@ -105,7 +105,7 @@ export class LevelManager {
                 // 横方向の重なりがあるかチェック
                 if (laserRight > brickLeft && laserLeft < brickRight) {
                     if (brick.isIssue) {
-                        continue; // イシューブロックにはレーザー無効
+                        continue; // コアブロックにはレーザー無効
                     }
                     brick.hit(damage);
                     results.push({

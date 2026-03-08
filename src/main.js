@@ -42,7 +42,7 @@ class Game {
         this.paused = false;         // 一時停止フラグ
 
         // チュートリアル関連
-        this.tutorialState = 0;      // 0:なし, 1:初回, 2:初リポップ, 3:初イシュー
+        this.tutorialState = 0;      // 0:なし, 1:初回, 2:初リポップ, 3:初コア
         this.hasShownIntro = false;
         this.hasShownRespawn = false;
         this.hasShownIssue = false;
@@ -950,7 +950,7 @@ class Game {
         } else if (this.tutorialState === 3.1) {
             textLines = [
                 "出たな！あいつが今回のデカブツ…",
-                "【イシューブロック】だ！",
+                "【コアブロック】だ！",
                 "普通の攻撃じゃ1ダメージしか通らねぇし、",
                 "必殺技も弾かれちまう！"
             ];
