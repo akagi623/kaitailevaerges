@@ -71,84 +71,40 @@ class Game {
     }
 
     setupStartListener() {
-        const startHandler = (e) => {
-            if (!this.gameStarted) {
-                this.gameStarted = true;
-                this.entranceEndTime = Date.now() + 500; // 0.5秒間フラッシュ
-
-                // Web Audio の初期化（ユーザー操作後に必須）
-                this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
-                // SE ファイルを全てバッファにロード（デコードは一回だけ）
-                const loadSE = (path) => fetch(path)
-                    .then(r => r.arrayBuffer())
-                    .then(buf => this.audioCtx.decodeAudioData(buf));
-
-                loadSE('soundeffect/cracker_3.mp3').then(b => { this.hitSEBuffer = b; }).catch(e => console.error('Hit SE load failed:', e));
-                loadSE('soundeffect/winse.mp3').then(b => { this.winSEBuffer = b; }).catch(e => console.error('Win SE load failed:', e));
-                loadSE('soundeffect/losese.mp3').then(b => { this.loseSEBuffer = b; }).catch(e => console.error('Lose SE load failed:', e));
-                loadSE('soundeffect/laser.mp3').then(b => { this.laserSEBuffer = b; }).catch(e => console.error('Laser SE load failed:', e));
-                loadSE('soundeffect/padolstrech.mp3').then(b => { this.paddleStretchSEBuffer = b; }).catch(e => console.error('Paddle SE load failed:', e));
-                loadSE('soundeffect/levelup.mp3').then(b => { this.levelupSEBuffer = b; }).catch(e => console.error('LevelUp SE load failed:', e));
-
-                this.bgm.play().catch(e => console.error("Audio playback failed:", e));
-                this.canvas.removeEventListener('click', startHandler);
-                this.canvas.removeEventListener('touchstart', startHandler);
-            } else if (this.gameStarted && !this.gameOver && !this.gameWin) {
-                // ゲーム実行中のクリック/タップ処理
-                const rect = this.canvas.getBoundingClientRect();
-                const scaleX = CANVAS_WIDTH / rect.width;
-                const scaleY = CANVAS_HEIGHT / rect.height;
-                
-                const clientX = e.clientX || (e.touches && e.touches[0].clientX);
-                const clientY = e.clientY || (e.touches && e.touches[0].clientY);
-                
-                if (clientX !== undefined && clientY !== undefined) {
-                    const canvasX = (clientX - rect.left) * scaleX;
-                    const canvasY = (clientY - rect.top) * scaleY;
-                    
-                    // 必殺技ボタン判定（左下：x < 155, y > CANVAS_HEIGHT - 65）
-                    if (canvasX < 155 && canvasY > CANVAS_HEIGHT - 65) {
-                        this.fireLaser();
-                    }
-                }
-            } else if (this.gameOver || this.gameWin) {
-                // リスタートボタン判定
-                const rect = this.canvas.getBoundingClientRect();
-                const scaleX = CANVAS_WIDTH / rect.width;
-                const scaleY = CANVAS_HEIGHT / rect.height;
-                const clientX = e.clientX || (e.touches && e.touches[0].clientX);
-                const clientY = e.clientY || (e.touches && e.touches[0].clientY);
-                
-                if (clientX !== undefined && clientY !== undefined) {
-                    const canvasX = (clientX - rect.left) * scaleX;
-                    const canvasY = (clientY - rect.top) * scaleY;
-                    
-                    // 中央のリスタートボタン付近
-                    if (canvasX > CANVAS_WIDTH / 2 - 100 && canvasX < CANVAS_WIDTH / 2 + 100 &&
-                        canvasY > CANVAS_HEIGHT / 2 + 60 && canvasY < CANVAS_HEIGHT / 2 + 110) {
-                        location.reload(); // シンプルにリロードしてリスタート
-                    }
-                }
-            }
-        };
-        
-        this.canvas.addEventListener('click', startHandler);
-        this.canvas.addEventListener('touchstart', (e) => {
+        const handleCanvasInput = (clientX, clientY) => {
             const rect = this.canvas.getBoundingClientRect();
             const scaleX = CANVAS_WIDTH / rect.width;
             const scaleY = CANVAS_HEIGHT / rect.height;
 
-            // 新しく置かれた指（changedTouches）を全てチェック
-            for (const touch of e.changedTouches) {
-                const canvasX = (touch.clientX - rect.left) * scaleX;
-                const canvasY = (touch.clientY - rect.top) * scaleY;
+            const canvasX = (clientX - rect.left) * scaleX;
+            const canvasY = (clientY - rect.top) * scaleY;
 
-                if (!this.gameStarted && Date.now() >= this.entranceEndTime) {
-                    // ゲーム開始タップ
-                    startHandler(e);
-                    break;
-                } else if (this.gameStarted && !this.gameOver && !this.gameWin) {
+            if (!this.gameStarted) {
+                // 初回のロード・ゲーム開始タップ
+                this.gameStarted = true;
+                this.entranceEndTime = Date.now() + 500; // 0.5秒間フラッシュ
+
+                // Web Audio の初期化（ユーザー操作後に必須）
+                if (!this.audioCtx) {
+                    this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+                    // SE ファイルを全てバッファにロード（デコードは一回だけ）
+                    const loadSE = (path) => fetch(path)
+                        .then(r => r.arrayBuffer())
+                        .then(buf => this.audioCtx.decodeAudioData(buf));
+
+                    loadSE('soundeffect/cracker_3.mp3').then(b => { this.hitSEBuffer = b; }).catch(e => console.error('Hit SE load failed:', e));
+                    loadSE('soundeffect/winse.mp3').then(b => { this.winSEBuffer = b; }).catch(e => console.error('Win SE load failed:', e));
+                    loadSE('soundeffect/losese.mp3').then(b => { this.loseSEBuffer = b; }).catch(e => console.error('Lose SE load failed:', e));
+                    loadSE('soundeffect/laser.mp3').then(b => { this.laserSEBuffer = b; }).catch(e => console.error('Laser SE load failed:', e));
+                    loadSE('soundeffect/padolstrech.mp3').then(b => { this.paddleStretchSEBuffer = b; }).catch(e => console.error('Paddle SE load failed:', e));
+                    loadSE('soundeffect/levelup.mp3').then(b => { this.levelupSEBuffer = b; }).catch(e => console.error('LevelUp SE load failed:', e));
+
+                    this.bgm.play().catch(e => console.error("Audio playback failed:", e));
+                }
+            } else if (!this.gameOver && !this.gameWin) {
+                // 入場フラッシュ時間を過ぎている場合のみ操作を受け付ける
+                if (Date.now() >= this.entranceEndTime) {
                     if (this.tutorialState > 0) {
                         // チュートリアルのページ送り
                         if (this.tutorialState === 1.1) this.tutorialState = 1.2;
@@ -157,9 +113,7 @@ class Game {
                         else if (this.tutorialState === 3.1) this.tutorialState = 3.2;
                         else if (this.tutorialState === 3.2) this.tutorialState = 0;
                         else this.tutorialState = 0;
-                        return;
-                    }
-                    if (this.paused) {
+                    } else if (this.paused) {
                         // ポーズ画面のタッチ（再開ボタンなど）
                         this.handlePauseTouch(canvasX, canvasY);
                     } else if (this.levelingUp) {
@@ -174,13 +128,24 @@ class Game {
                             this.fireLaser();
                         }
                     }
-                } else if (this.gameOver || this.gameWin) {
-                    // リスタートボタン判定
-                    if (canvasX > CANVAS_WIDTH / 2 - 100 && canvasX < CANVAS_WIDTH / 2 + 100 &&
-                        canvasY > CANVAS_HEIGHT / 2 + 60 && canvasY < CANVAS_HEIGHT / 2 + 110) {
-                        location.reload();
-                    }
                 }
+            } else if (this.gameOver || this.gameWin) {
+                // リスタートボタン判定
+                if (canvasX > CANVAS_WIDTH / 2 - 100 && canvasX < CANVAS_WIDTH / 2 + 100 &&
+                    canvasY > CANVAS_HEIGHT / 2 + 60 && canvasY < CANVAS_HEIGHT / 2 + 110) {
+                    location.reload();
+                }
+            }
+        };
+        
+        this.canvas.addEventListener('click', (e) => {
+            handleCanvasInput(e.clientX, e.clientY);
+        });
+
+        this.canvas.addEventListener('touchstart', (e) => {
+            // 新しく置かれた指（changedTouches）を全てチェック
+            for (const touch of e.changedTouches) {
+                handleCanvasInput(touch.clientX, touch.clientY);
             }
 
             // スクロール防止
