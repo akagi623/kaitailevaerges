@@ -48,6 +48,10 @@ class Game {
         this.hasShownIssue = false;
         this.tutorialTargetBrick = null;
 
+        // 親方アイコン画像の読み込み
+        this.oyakataImage = new Image();
+        this.oyakataImage.src = 'chara_2_icon.png';
+
         // Web Audio API（SE用）
         this.audioCtx = null;    // ユーザー操作後に初期化
         this.hitSEBuffer = null; // ヒットSE
@@ -146,7 +150,13 @@ class Game {
                     break;
                 } else if (this.gameStarted && !this.gameOver && !this.gameWin) {
                     if (this.tutorialState > 0) {
-                        this.tutorialState = 0; // タップでチュートリアル閉じる
+                        // チュートリアルのページ送り
+                        if (this.tutorialState === 1.1) this.tutorialState = 1.2;
+                        else if (this.tutorialState === 1.2) this.tutorialState = 0;
+                        else if (this.tutorialState === 2.1) this.tutorialState = 0;
+                        else if (this.tutorialState === 3.1) this.tutorialState = 3.2;
+                        else if (this.tutorialState === 3.2) this.tutorialState = 0;
+                        else this.tutorialState = 0;
                         return;
                     }
                     if (this.paused) {
@@ -206,7 +216,7 @@ class Game {
         // チュートリアル初回表示
         if (!this.hasShownIntro) {
             this.hasShownIntro = true;
-            this.showTutorial(1);
+            this.showTutorial(1.1);
         }
         
         if (this.tutorialState > 0) return; // チュートリアル中は停止
@@ -219,13 +229,13 @@ class Game {
             (brick) => {
                 if (!this.hasShownRespawn) {
                     this.hasShownRespawn = true;
-                    this.showTutorial(2, brick);
+                    this.showTutorial(2.1, brick);
                 }
             },
             (brick) => {
                 if (!this.hasShownIssue) {
                     this.hasShownIssue = true;
-                    this.showTutorial(3, brick);
+                    this.showTutorial(3.1, brick);
                 }
             }
         );
@@ -860,14 +870,14 @@ class Game {
         this.ctx.lineWidth = 4;
         this.ctx.setLineDash([10, 5]);
 
-        if (this.tutorialState === 1) {
+        if (Math.floor(this.tutorialState) === 1) {
             // LEVERAGE
             this.ctx.strokeRect(CANVAS_WIDTH/2 - 100, 30, 200, 40);
             // EXP bar
             this.ctx.strokeRect(10, 80, 250, 35);
             // Special Gauge (左下)
             this.ctx.strokeRect(10, CANVAS_HEIGHT - 60, 140, 50);
-        } else if (this.tutorialState === 2 || this.tutorialState === 3) {
+        } else if (Math.floor(this.tutorialState) === 2 || Math.floor(this.tutorialState) === 3) {
             if (this.tutorialTargetBrick) {
                 const b = this.tutorialTargetBrick;
                 this.ctx.strokeRect(b.x - 5, b.y - 5, b.width + 10, b.height + 10);
@@ -877,59 +887,90 @@ class Game {
 
         // セリフボックス (下部)
         const boxX = 20;
-        const boxY = CANVAS_HEIGHT - 220;
+        const boxH = 180;
+        const boxY = CANVAS_HEIGHT - boxH - 20;
         const boxW = CANVAS_WIDTH - 40;
-        const boxH = 150;
 
         this.ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
         this.ctx.beginPath();
         this.ctx.roundRect(boxX, boxY, boxW, boxH, 10);
         this.ctx.fill();
 
-        // 親方アイコン文字 (背景に対して少し上に飛び出させる)
+        // 親方アイコン (画像があれば画像、なければ絵文字)
+        const iconSize = 60;
+        const iconX = boxX + 40;
+        const iconY = boxY - 20;
+        
+        // 白背景（フチ）
         this.ctx.fillStyle = '#fff';
         this.ctx.beginPath();
-        this.ctx.arc(boxX + 30, boxY - 10, 30, 0, Math.PI * 2);
+        this.ctx.arc(iconX, iconY + iconSize/2 - 5, iconSize/2 + 5, 0, Math.PI * 2);
         this.ctx.fill();
-        this.ctx.font = '45px "Segoe UI"';
-        this.ctx.textAlign = 'center';
-        this.ctx.fillText('👷', boxX + 30, boxY + 5);
+        
+        if (this.oyakataImage && this.oyakataImage.complete && this.oyakataImage.naturalWidth > 0) {
+            this.ctx.save();
+            this.ctx.beginPath();
+            this.ctx.arc(iconX, iconY + iconSize/2 - 5, iconSize/2, 0, Math.PI * 2);
+            this.ctx.clip();
+            this.ctx.drawImage(this.oyakataImage, iconX - iconSize/2, iconY - 5, iconSize, iconSize);
+            this.ctx.restore();
+        } else {
+            this.ctx.font = '45px "Segoe UI"';
+            this.ctx.textAlign = 'center';
+            this.ctx.fillText('👷', iconX, iconY + 15);
+        }
 
         // セリフ描画
         this.ctx.fillStyle = '#111';
-        this.ctx.font = 'bold 15px "Segoe UI"';
-        this.ctx.textAlign = 'left';
+        this.ctx.font = 'bold 20px "Segoe UI"'; // テキストを大きく
+        this.ctx.textAlign = 'center'; // 真ん中寄せ
         
         let textLines = [];
-        if (this.tutorialState === 1) {
+        if (this.tutorialState === 1.1) {
             textLines = [
-                "おう新人！現場に入ったらまずはブロックを叩き割れ！",
-                "連続で当て続ければ【LEVERAGE】でダメージ倍増だ！",
-                "壊せば【経験値】が貯まる。ゲージが満タンになったら",
-                "左下の【FIRE!】をタップして必殺技をブチかませ！",
-                "                 (画面をタップして次へ)"
+                "おう新人！",
+                "ブロックはHPがゼロになれば壊れるぞ！",
+                "連続で当て続ければ【LEVERAGE】が効いて",
+                "ダメージが1.5倍ずつ倍増だ！"
             ];
-        } else if (this.tutorialState === 2) {
+        } else if (this.tutorialState === 1.2) {
             textLines = [
-                "おっと、油断するなよ！この現場のブロックは、",
-                "【HPがゼロになって壊れても】",
+                "ブロックを壊せば【経験値】が貯まる。",
+                "満タンになったら、下の【FIRE!】を",
+                "タップして必殺技をブチかませ！"
+            ];
+        } else if (this.tutorialState === 2.1) {
+            textLines = [
+                "おっと、油断するなよ！",
+                "この現場のブロックは、壊しても",
                 "時間が経てば【復活】しちまうぞ！",
-                "早えとこカタをつけねぇとな！",
-                "                 (画面をタップして次へ)"
+                "早えとこカタをつけねぇとな！"
             ];
-        } else if (this.tutorialState === 3) {
+        } else if (this.tutorialState === 3.1) {
             textLines = [
-                "出たな！あいつが今回のデカブツ……",
+                "出たな！あいつが今回のデカブツ…",
                 "【イシューブロック】だ！",
-                "普通の攻撃じゃ1ダメージしか通らねぇし、必殺技も無効だ。",
-                "だが、あれさえぶっ壊せばこの現場は【クリア】だ！",
-                "                 (画面をタップして次へ)"
+                "普通の攻撃じゃ1ダメージしか通らねぇし、",
+                "必殺技も弾かれちまう！"
+            ];
+        } else if (this.tutorialState === 3.2) {
+            textLines = [
+                "だが、あれさえぶっ壊せば",
+                "この現場は【クリア】だ！",
+                "死ぬ気で狙え！"
             ];
         }
 
+        const lineHeight = 30;
+        const startY = boxY + 45;
         for (let i = 0; i < textLines.length; i++) {
-            this.ctx.fillText(textLines[i], boxX + 15, boxY + 35 + i * 22);
+            this.ctx.fillText(textLines[i], boxX + boxW / 2, startY + i * lineHeight);
         }
+        
+        // Next/Close indicator
+        this.ctx.fillStyle = '#666';
+        this.ctx.font = 'bold 14px "Segoe UI"';
+        this.ctx.fillText("▼ タップして次へ ▼", boxX + boxW / 2, boxY + boxH - 15);
     }
 }
 
