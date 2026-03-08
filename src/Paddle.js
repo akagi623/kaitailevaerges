@@ -1,12 +1,13 @@
 import { CANVAS_WIDTH, CANVAS_HEIGHT, COLORS, PADDLE_WIDTH, PADDLE_HEIGHT, PADDLE_SPEED } from './Constants.js';
 
 export class Paddle {
-    constructor() {
-        this.width = PADDLE_WIDTH;
+    constructor(initialWidth = 80) {
+        this.width = initialWidth;
         this.height = PADDLE_HEIGHT;
         this.x = (CANVAS_WIDTH - this.width) / 2;
         this.y = CANVAS_HEIGHT - this.height - 20;
         this.color = COLORS.PADDLE;
+        this.speed = PADDLE_SPEED; // player.speedで後から上書き可能
         
         this.rightPressed = false;
         this.leftPressed = false;
@@ -75,9 +76,9 @@ export class Paddle {
 
     update() {
         if (this.rightPressed && this.x < CANVAS_WIDTH - this.width) {
-            this.x += PADDLE_SPEED;
+            this.x += this.speed;
         } else if (this.leftPressed && this.x > 0) {
-            this.x -= PADDLE_SPEED;
+            this.x -= this.speed;
         }
     }
 

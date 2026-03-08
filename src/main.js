@@ -4,6 +4,7 @@ import { Paddle } from './Paddle.js';
 import { LevelManager } from './LevelManager.js';
 import { EffectManager } from './EffectManager.js';
 import { Item, ITEM_TYPES } from './Item.js';
+import { Player } from './Player.js';
 
 class Game {
     constructor() {
@@ -15,7 +16,8 @@ class Game {
     }
 
     init() {
-        this.paddle = new Paddle();
+        this.player = new Player();
+        this.paddle = new Paddle(this.player.defense);
         this.ball = new Ball(CANVAS_WIDTH / 2, CANVAS_HEIGHT - 50, BALL_INITIAL_SPEED, -BALL_INITIAL_SPEED);
         this.levelManager = new LevelManager();
         this.effectManager = new EffectManager();
@@ -31,10 +33,12 @@ class Game {
         this.lastCombo = 0; // 直近のコンボ数を保持
         this.baseDamage = 10;
         this.isFadingOut = false;
-        this.speedMultiplier = 1.0; // ボールのスピード倍率
-        this.specialGauge = 0; // 必殺技ゲージ
-        this.lastSETime = 0; // SE再生の連打制限用
-        this.lastLaserTime = 0; // 前回のレーザー発射時刻
+        this.speedMultiplier = 1.0;
+        this.specialGauge = 0;
+        this.lastSETime = 0;
+        this.lastLaserTime = 0;
+        this.levelingUp = false;     // レベルアップ中フラグ
+        this.selectedStat = null;    // 選択したステータス ('attack'/'speed'/'defense')
 
         // Web Audio API（SE用）
         this.audioCtx = null;    // ユーザー操作後に初期化
@@ -131,9 +135,14 @@ class Game {
                     startHandler(e);
                     break;
                 } else if (this.gameStarted && !this.gameOver && !this.gameWin) {
-                    // 必殺技ボタン判定（左下：x < 155, y > CANVAS_HEIGHT - 65）
-                    if (canvasX < 155 && canvasY > CANVAS_HEIGHT - 65) {
-                        this.fireLaser();
+                    if (this.levelingUp) {
+                        // レベルアップ選択画面のボタン判定
+                        this.handleLevelUpTouch(canvasX, canvasY);
+                    } else {
+                        // 必殺技ボタン判定（左下：x < 155, y > CANVAS_HEIGHT - 65）
+                        if (canvasX < 155 && canvasY > CANVAS_HEIGHT - 65) {
+                            this.fireLaser();
+                        }
                     }
                 } else if (this.gameOver || this.gameWin) {
                     // リスタートボタン判定
@@ -161,13 +170,14 @@ class Game {
 
     update(deltaTime) {
         if (!this.gameStarted || this.gameOver || this.gameWin || Date.now() < this.entranceEndTime) return;
+        if (this.levelingUp) return; // レベルアップ選択中は停止
 
         this.paddle.update();
         this.ball.update();
         this.effectManager.update();
         
-        // コンボに応じたダメージ計算
-        const currentDamage = Math.floor(this.baseDamage * Math.pow(1.5, Math.max(0, this.combo)));
+        // コンボとプレイヤー攻撃力に応じたダメージ計算
+        const currentDamage = Math.floor(this.player.attack * Math.pow(1.5, Math.max(0, this.combo)));
 
         // ブロックとの衝突判定
         const collisionResult = this.levelManager.checkCollision(this.ball, currentDamage);
@@ -201,6 +211,11 @@ class Game {
 
             // 破壊された時のみの処理
             if (collisionResult.destroyed) {
+                // EXP獲得
+                const leveledUp = this.player.addExp(10);
+                if (leveledUp) {
+                    this.onLevelUp();
+                }
                 // アイテムドロップ（確率）
                 if (Math.random() < 0.2) {
                     this.items.push(new Item(collisionResult.brick.x, collisionResult.brick.y, ITEM_TYPES.EXPAND));
@@ -322,14 +337,41 @@ class Game {
         this.ctx.textAlign = 'right';
         this.ctx.fillText(`Lives: ${this.lives}`, CANVAS_WIDTH - 15, 28);
 
-        // 2行目: LEVERAGEの表示（コンボ中または直近の値を表示）
+        // 2行目: LEVERAGEの表示
         const displayCombo = this.combo > 0 ? this.combo : this.lastCombo;
         if (displayCombo > 0) {
             const label = displayCombo >= 2 ? 'LEVERAGES!' : 'LEVERAGE!';
             this.ctx.fillStyle = this.combo > 0 ? '#ffeb3b' : '#9e9e9e';
-            this.ctx.font = 'bold 22px "Segoe UI"'; // 大きめに
+            this.ctx.font = 'bold 22px "Segoe UI"';
             this.ctx.textAlign = 'center';
-            this.ctx.fillText(`${displayCombo} ${label}`, CANVAS_WIDTH / 2, 58); // 少し下げる
+            this.ctx.fillText(`${displayCombo} ${label}`, CANVAS_WIDTH / 2, 58);
+        }
+
+        // 3行目: EXPバー（左 Lv表示 + ゲージ）
+        if (this.gameStarted) {
+            const barX = 15;
+            const barY = 72;
+            const barW = 160;
+            const barH = 10;
+
+            // Lv テキスト
+            this.ctx.fillStyle = '#fff';
+            this.ctx.font = 'bold 12px "Segoe UI"';
+            this.ctx.textAlign = 'left';
+            this.ctx.fillText(`Lv.${this.player.level}`, barX, barY - 1);
+
+            // ゲージ背景
+            this.ctx.fillStyle = '#444';
+            this.ctx.fillRect(barX + 30, barY - 9, barW, barH);
+
+            // ゲージ本体
+            this.ctx.fillStyle = '#76ff03';
+            this.ctx.fillRect(barX + 30, barY - 9, barW * this.player.expRatio, barH);
+
+            // EXP数値
+            this.ctx.fillStyle = '#aaa';
+            this.ctx.font = '10px "Segoe UI"';
+            this.ctx.fillText(`${this.player.exp}/${this.player.expToNextLevel}`, barX + 30 + barW + 4, barY);
         }
 
         // 必殺技ゲージの描画
@@ -346,6 +388,12 @@ class Game {
             return;
         }
 
+        // レベルアップ選択画面
+        if (this.levelingUp) {
+            this.drawLevelUpScreen();
+            return;
+        }
+
         if (!this.gameStarted) {
             this.drawOverlay('Tap TO START', '#4fc3f7');
         } else if (this.gameOver) {
@@ -353,6 +401,109 @@ class Game {
         } else if (this.gameWin) {
             this.drawOverlay('YOU WIN!', '#4caf50');
         }
+    }
+
+    // --------- レベルアップ処理 ---------
+    onLevelUp() {
+        this.levelingUp = true;
+        this.selectedStat = null;
+        // BGMを小さく
+        if (this.bgm && !this.bgm.paused) this.bgm.volume = 0.15;
+    }
+
+    handleLevelUpTouch(canvasX, canvasY) {
+        const cx = CANVAS_WIDTH / 2;
+        const btnW = 200, btnH = 50;
+        const startY = CANVAS_HEIGHT / 2 - 30;
+        const gap = 65;
+
+        // 各ステータスボタン
+        const stats = ['attack', 'speed', 'defense'];
+        stats.forEach((stat, i) => {
+            const bx = cx - btnW / 2;
+            const by = startY + i * gap;
+            if (canvasX >= bx && canvasX <= bx + btnW &&
+                canvasY >= by && canvasY <= by + btnH) {
+                this.selectedStat = stat;
+            }
+        });
+
+        // OKボタン（選択済みのときだけ有効）
+        if (this.selectedStat) {
+            const okX = cx - 80, okY = startY + 3 * gap;
+            if (canvasX >= okX && canvasX <= okX + 160 &&
+                canvasY >= okY && canvasY <= okY + 50) {
+                this.player.upgrade(this.selectedStat);
+                // speedはパドルに即反映
+                this.paddle.speed = this.player.speed;
+                // 守備はパドル幅に反映
+                if (this.selectedStat === 'defense') {
+                    const oldCenter = this.paddle.x + this.paddle.width / 2;
+                    this.paddle.width = this.player.defense;
+                    this.paddle.x = oldCenter - this.paddle.width / 2;
+                }
+                this.levelingUp = false;
+                this.selectedStat = null;
+                // BGM音量を戻す
+                if (this.bgm && !this.bgm.paused) this.bgm.volume = 0.5;
+            }
+        }
+    }
+
+    drawLevelUpScreen() {
+        const ctx = this.ctx;
+        const cx = CANVAS_WIDTH / 2;
+        // 半透明オーバーレイ
+        ctx.fillStyle = 'rgba(0,0,0,0.75)';
+        ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+        // タイトル
+        ctx.fillStyle = '#ffeb3b';
+        ctx.font = 'bold 36px "Segoe UI"';
+        ctx.textAlign = 'center';
+        ctx.fillText('LEVEL UP!', cx, CANVAS_HEIGHT / 2 - 120);
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 22px "Segoe UI"';
+        ctx.fillText(`→ Lv. ${this.player.level}`, cx, CANVAS_HEIGHT / 2 - 82);
+
+        // ステータスボタン
+        const btnW = 200, btnH = 50;
+        const startY = CANVAS_HEIGHT / 2 - 30;
+        const gap = 65;
+        const options = [
+            { stat: 'attack',  label: `⚔ 攻撃UP  (+5 ダメージ)` },
+            { stat: 'speed',   label: `⚡ スピードUP (+1 速度)` },
+            { stat: 'defense', label: `🛡 守備UP   (+18 パドル幅)` },
+        ];
+        options.forEach(({ stat, label }, i) => {
+            const bx = cx - btnW / 2;
+            const by = startY + i * gap;
+            const selected = this.selectedStat === stat;
+            ctx.fillStyle = selected ? '#ffeb3b' : '#333';
+            ctx.strokeStyle = selected ? '#ffeb3b' : '#888';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.roundRect(bx, by, btnW, btnH, 8);
+            ctx.fill();
+            ctx.stroke();
+            ctx.fillStyle = selected ? '#000' : '#fff';
+            ctx.font = 'bold 15px "Segoe UI"';
+            ctx.textAlign = 'center';
+            ctx.fillText(label, cx, by + 32);
+        });
+
+        // OKボタン
+        const okY = startY + 3 * gap;
+        const okAlpha = this.selectedStat ? 1.0 : 0.4;
+        ctx.globalAlpha = okAlpha;
+        ctx.fillStyle = '#4caf50';
+        ctx.beginPath();
+        ctx.roundRect(cx - 80, okY, 160, 50, 8);
+        ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 20px "Segoe UI"';
+        ctx.fillText('OK', cx, okY + 33);
+        ctx.globalAlpha = 1.0;
     }
 
     drawOverlay(text, color) {
