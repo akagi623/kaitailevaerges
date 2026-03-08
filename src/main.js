@@ -47,6 +47,7 @@ class Game {
         this.loseSEBuffer = null; // ゲームオーバーSE
         this.laserSEBuffer = null; // 必殺技発射SE
         this.paddleStretchSEBuffer = null; // パドル伸長アイテムSE
+        this.levelupSEBuffer = null; // レベルアップSE
 
         // BGM（長い曲は streaming の HTMLAudio で再生）
         this.bgm = new Audio('BURNING ADRENALINE.mp3');
@@ -76,6 +77,7 @@ class Game {
                 loadSE('soundeffect/losese.mp3').then(b => { this.loseSEBuffer = b; }).catch(e => console.error('Lose SE load failed:', e));
                 loadSE('soundeffect/laser.mp3').then(b => { this.laserSEBuffer = b; }).catch(e => console.error('Laser SE load failed:', e));
                 loadSE('soundeffect/padolstrech.mp3').then(b => { this.paddleStretchSEBuffer = b; }).catch(e => console.error('Paddle SE load failed:', e));
+                loadSE('soundeffect/levelup.mp3').then(b => { this.levelupSEBuffer = b; }).catch(e => console.error('LevelUp SE load failed:', e));
 
                 this.bgm.play().catch(e => console.error("Audio playback failed:", e));
                 this.canvas.removeEventListener('click', startHandler);
@@ -350,25 +352,21 @@ class Game {
         // 3行目: EXPバー（左 Lv表示 + ゲージ）
         if (this.gameStarted) {
             const barX = 15;
-            const barY = 72;
+            const barY = 88; // LEVERAGE!（y=58）の下にスペース
             const barW = 160;
             const barH = 10;
 
-            // Lv テキスト
             this.ctx.fillStyle = '#fff';
             this.ctx.font = 'bold 12px "Segoe UI"';
             this.ctx.textAlign = 'left';
             this.ctx.fillText(`Lv.${this.player.level}`, barX, barY - 1);
 
-            // ゲージ背景
             this.ctx.fillStyle = '#444';
             this.ctx.fillRect(barX + 30, barY - 9, barW, barH);
 
-            // ゲージ本体
             this.ctx.fillStyle = '#76ff03';
             this.ctx.fillRect(barX + 30, barY - 9, barW * this.player.expRatio, barH);
 
-            // EXP数値
             this.ctx.fillStyle = '#aaa';
             this.ctx.font = '10px "Segoe UI"';
             this.ctx.fillText(`${this.player.exp}/${this.player.expToNextLevel}`, barX + 30 + barW + 4, barY);
@@ -407,8 +405,8 @@ class Game {
     onLevelUp() {
         this.levelingUp = true;
         this.selectedStat = null;
-        // BGMを小さく
         if (this.bgm && !this.bgm.paused) this.bgm.volume = 0.15;
+        this.playWebAudioSE(this.levelupSEBuffer, 0.8);
     }
 
     handleLevelUpTouch(canvasX, canvasY) {
