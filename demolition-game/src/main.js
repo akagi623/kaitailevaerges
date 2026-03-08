@@ -106,7 +106,7 @@ ui.startBtn.addEventListener('click', () => {
 
 ui.stopBtn.addEventListener('click', () => {
     engine.isPaused = true;
-    bgm.volume = 0.05;
+    bgm.volume = 0.025;
     
     // Update pause stats
     ui.pauseCharName.textContent = currentCharacter.name;

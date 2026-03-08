@@ -332,6 +332,16 @@ class Game {
     }
 
     formatScore(score) {
+        if (score >= 100000000) {
+            const oku = Math.floor(score / 100000000);
+            const man = Math.floor((score % 100000000) / 10000);
+            const rest = score % 10000;
+            let str = `${oku}億`;
+            if (man > 0) str += `${man}万`;
+            if (rest > 0) str += `${rest}点`;
+            else str += `点`;
+            return str;
+        }
         if (score >= 10000) {
             const man = Math.floor(score / 10000);
             const rest = score % 10000;
@@ -651,7 +661,7 @@ class Game {
         }
 
         // ラベル
-        this.ctx.fillStyle = '#fff';
+        this.ctx.fillStyle = this.specialGauge >= SPECIAL_GAUGE_MAX ? '#ff5252' : '#fff'; // 見やすく色を変更
         this.ctx.font = 'bold 16px "Segoe UI"';
         this.ctx.textAlign = 'center';
         this.ctx.fillText(this.specialGauge >= SPECIAL_GAUGE_MAX ? 'FIRE!' : 'SPECIAL', x + width / 2, y + height / 2 + 6);
