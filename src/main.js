@@ -73,6 +73,7 @@ class Game {
         this.bgm = new Audio('BURNING ADRENALINE.mp3');
         this.bgm.loop = true;
         this.bgm.volume = 0.5;
+        this.bgm.autoplay = false; // 明示的に無効化
 
         this.setupStartListener();
         this.loop(0);
@@ -1233,7 +1234,7 @@ class Game {
         const btnW = 120, btnH = 45;
         const btnX = CANVAS_WIDTH / 2 - btnW / 2;
         const btnY = modalY + modalH - 70;
-        ctx.fillStyle = this.char1Icon.complete ? '#4caf50' : '#888';
+        ctx.fillStyle = this.yasuImage.complete ? '#4caf50' : '#888';
         ctx.beginPath();
         ctx.roundRect(btnX, btnY, btnW, btnH, 10);
         ctx.fill();
@@ -1241,7 +1242,7 @@ class Game {
         ctx.font = 'bold 18px "Segoe UI"';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(this.char1Icon.complete ? '選択' : 'Loading...', CANVAS_WIDTH / 2, btnY + btnH / 2);
+        ctx.fillText(this.yasuImage.complete ? '選択' : 'Loading...', CANVAS_WIDTH / 2, btnY + btnH / 2);
         ctx.textBaseline = 'alphabetic';
     }
 
