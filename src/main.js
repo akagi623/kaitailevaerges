@@ -190,6 +190,9 @@ class Game {
         this.paddle.update();
         this.ball.update();
         this.effectManager.update();
+        // 毎フレーム火の粉を発生させる
+        this.effectManager.createFireParticle(this.ball.x, this.ball.y);
+
         this.levelManager.update(deltaTime, 
             (brick) => {
                 if (!this.hasShownRespawn) {

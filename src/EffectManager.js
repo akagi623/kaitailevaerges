@@ -84,10 +84,23 @@ export class EffectManager {
         this.lasers = [];
     }
 
-    createExplosion(x, y, count = 6) { // 10から6に削減
+    createExplosion(x, y, count = 6) { 
         for (let i = 0; i < count; i++) {
             this.particles.push(new Particle(x, y));
         }
+    }
+
+    createFireParticle(x, y) {
+        // 火の粉。黄色、オレンジ、赤のいずれか。
+        const r = Math.random();
+        let color = '#ffeb3b'; // 黄
+        if (r > 0.4) color = '#ff9800'; // 橙
+        if (r > 0.8) color = '#ff5722'; // 赤
+        
+        const p = new Particle(x, y, color, Math.random() * 4 + 2);
+        // 火の粉は上に昇る傾向
+        p.speedY -= 1;
+        this.particles.push(p);
     }
 
     createDamageText(x, y, text, comboCount) {

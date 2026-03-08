@@ -1,15 +1,15 @@
 import { COLORS } from './Constants.js';
 
 export class Particle {
-    constructor(x, y) {
+    constructor(x, y, color = COLORS.PARTICLE, size = null) {
         this.x = x;
         this.y = y;
-        this.size = Math.random() * 3 + 1;
-        this.speedX = (Math.random() - 0.5) * 6;
-        this.speedY = (Math.random() - 0.5) * 6;
-        this.color = COLORS.PARTICLE;
-        this.life = 1.0; // 1.0 to 0
-        this.decay = Math.random() * 0.02 + 0.01;
+        this.size = size || (Math.random() * 3 + 1);
+        this.speedX = (Math.random() - 0.5) * 4;
+        this.speedY = (Math.random() - 0.5) * 4;
+        this.color = color;
+        this.life = 1.0; 
+        this.decay = Math.random() * 0.05 + 0.02;
     }
 
     update() {
