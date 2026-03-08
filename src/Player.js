@@ -7,8 +7,8 @@ export class Player {
 
         // ステータス初期値
         this.attack = 10;   // ダメージ
-        this.speed = 8;     // パドル移動速度
-        this.defense = 80;  // パドル幅
+        this.speed = 8;     // パドル移動速度 (表示上1.0相当とする)
+        this.defense = 100; // パドル幅 (初期値100)
     }
 
     // EXPを追加してレベルアップ判定。レベルアップしたらtrueを返す

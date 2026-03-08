@@ -1,4 +1,4 @@
-import { CANVAS_WIDTH, CANVAS_HEIGHT, BALL_INITIAL_SPEED, SPECIAL_GAUGE_MAX, GAUGE_CHARGE_PER_HIT, LASER_DAMAGE, MONEY_DROP_RATE, MAGNET_RADIUS } from './Constants.js';
+import { CANVAS_WIDTH, CANVAS_HEIGHT, BALL_INITIAL_SPEED, SPECIAL_GAUGE_MAX, GAUGE_CHARGE_PER_HIT, LASER_DAMAGE, MONEY_DROP_RATE, MAGNET_RADIUS, GAME_STATE } from './Constants.js';
 import { Ball } from './Ball.js';
 import { Paddle } from './Paddle.js';
 import { LevelManager } from './LevelManager.js';
@@ -31,6 +31,7 @@ class Game {
         this.gameOver = false;
         this.gameWin = false;
         this.gameStarted = false;
+        this.gameState = GAME_STATE.TITLE; // 初期状態：タイトル画面
         this.entranceEndTime = 0; // 「現場入場！」フラッシュ終了時刻
         this.combo = 0;
         this.lastCombo = 0; // 直近のコンボ数を保持
@@ -51,7 +52,11 @@ class Game {
         this.hasShownIssue = false;
         this.tutorialTargetBrick = null;
 
-        // 親方アイコン画像の読み込み
+        // 画像の読み込み
+        this.topImage = new Image();
+        this.topImage.src = 'TOP.png';
+        this.yasuImage = new Image();
+        this.yasuImage.src = 'chara_1_icon.png';
         this.oyakataImage = new Image();
         this.oyakataImage.src = 'chara_2_icon.png';
 
@@ -82,63 +87,63 @@ class Game {
             const canvasX = (clientX - rect.left) * scaleX;
             const canvasY = (clientY - rect.top) * scaleY;
 
-            if (!this.gameStarted) {
-                // 初回のロード・ゲーム開始タップ
-                this.gameStarted = true;
-                this.entranceEndTime = Date.now() + 500; // 0.5秒間フラッシュ
-
-                // Web Audio の初期化（ユーザー操作後に必須）
-                if (!this.audioCtx) {
-                    this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
-                    // SE ファイルを全てバッファにロード（デコードは一回だけ）
-                    const loadSE = (path) => fetch(path)
-                        .then(r => r.arrayBuffer())
-                        .then(buf => this.audioCtx.decodeAudioData(buf));
-
-                    loadSE('soundeffect/cracker_3.mp3').then(b => { this.hitSEBuffer = b; }).catch(e => console.error('Hit SE load failed:', e));
-                    loadSE('soundeffect/winse.mp3').then(b => { this.winSEBuffer = b; }).catch(e => console.error('Win SE load failed:', e));
-                    loadSE('soundeffect/losese.mp3').then(b => { this.loseSEBuffer = b; }).catch(e => console.error('Lose SE load failed:', e));
-                    loadSE('soundeffect/laser.mp3').then(b => { this.laserSEBuffer = b; }).catch(e => console.error('Laser SE load failed:', e));
-                    loadSE('soundeffect/padolstrech.mp3').then(b => { this.paddleStretchSEBuffer = b; }).catch(e => console.error('Paddle SE load failed:', e));
-                    loadSE('soundeffect/levelup.mp3').then(b => { this.levelupSEBuffer = b; }).catch(e => console.error('LevelUp SE load failed:', e));
-
-                    this.bgm.play().catch(e => console.error("Audio playback failed:", e));
+            if (this.gameState === GAME_STATE.TITLE) {
+                // タイトルの「Game Start」ボタン判定
+                const btnX = CANVAS_WIDTH / 2 - 100;
+                const btnY = CANVAS_HEIGHT - 150;
+                if (canvasX > btnX && canvasX < btnX + 200 && canvasY > btnY && canvasY < btnY + 60) {
+                    this.initAudio(); // 最初の操作でオーディオ初期化
+                    this.gameState = GAME_STATE.CHAR_SELECT;
                 }
-            } else if (!this.gameOver && !this.gameWin) {
-                // 入場フラッシュ時間を過ぎている場合のみ操作を受け付ける
-                if (Date.now() >= this.entranceEndTime) {
-                    if (this.tutorialState > 0) {
-                        // チュートリアルのページ送り
-                        if (this.tutorialState === 1.1) this.tutorialState = 1.2;
-                        else if (this.tutorialState === 1.2) this.tutorialState = 0;
-                        else if (this.tutorialState === 2.1) this.tutorialState = 0;
-                        else if (this.tutorialState === 3.1) this.tutorialState = 3.2;
-                        else if (this.tutorialState === 3.2) this.tutorialState = 0;
-                        else this.tutorialState = 0;
-                    } else if (this.paused) {
-                        // ポーズ画面のタッチ（再開ボタンなど）
-                        this.handlePauseTouch(canvasX, canvasY);
-                    } else if (this.levelingUp) {
-                        // レベルアップ選択画面のボタン判定
-                        this.handleLevelUpTouch(canvasX, canvasY);
-                    } else {
-                        // ⏸ ポーズボタン判定（右上）
-                        if (canvasX > CANVAS_WIDTH - 50 && canvasY < 40) {
-                            this.paused = true;
-                        // 必殺技ボタン判定（左下：x < 155, y > CANVAS_HEIGHT - 65）
-                        } else if (canvasX < 155 && canvasY > CANVAS_HEIGHT - 65) {
-                            this.fireLaser();
+            } else if (this.gameState === GAME_STATE.CHAR_SELECT) {
+                // キャラクター選択（ヤス：中央の選択ボタン）
+                const btnX = CANVAS_WIDTH / 2 - 60;
+                const btnY = CANVAS_HEIGHT / 2 + 150;
+                if (canvasX > btnX && canvasX < btnX + 120 && canvasY > btnY && canvasY < btnY + 45) {
+                    this.gameState = GAME_STATE.STAGE_SELECT;
+                }
+            } else if (this.gameState === GAME_STATE.STAGE_SELECT) {
+                // ステージ選択（Stage 1：池袋）
+                const btnX = 50;
+                const btnY = 150;
+                if (canvasX > btnX && canvasX < btnX + 350 && canvasY > btnY && canvasY < btnY + 80) {
+                    this.startGame();
+                }
+            } else if (this.gameState === GAME_STATE.PLAYING) {
+                if (!this.gameOver && !this.gameWin) {
+                    // 入場フラッシュ時間を過ぎている場合のみ操作を受け付ける
+                    if (Date.now() >= this.entranceEndTime) {
+                        if (this.tutorialState > 0) {
+                            // チュートリアルのページ送り
+                            if (this.tutorialState === 1.1) this.tutorialState = 1.2;
+                            else if (this.tutorialState === 1.2) this.tutorialState = 0;
+                            else if (this.tutorialState === 2.1) this.tutorialState = 0;
+                            else if (this.tutorialState === 3.1) this.tutorialState = 3.2;
+                            else if (this.tutorialState === 3.2) this.tutorialState = 0;
+                            else this.tutorialState = 0;
+                        } else if (this.paused) {
+                            // ポーズ画面のタッチ（再開ボタンなど）
+                            this.handlePauseTouch(canvasX, canvasY);
+                        } else if (this.levelingUp) {
+                            // レベルアップ選択画面のボタン判定
+                            this.handleLevelUpTouch(canvasX, canvasY);
+                        } else {
+                            // ⏸ ポーズボタン判定（右上）
+                            if (canvasX > CANVAS_WIDTH - 50 && canvasY < 40) {
+                                this.paused = true;
+                            // 必殺技ボタン判定（左下：x < 155, y > CANVAS_HEIGHT - 65）
+                            } else if (canvasX < 155 && canvasY > CANVAS_HEIGHT - 65) {
+                                this.fireLaser();
+                            }
                         }
                     }
                 }
-            } else if (this.gameOver || this.gameWin) {
+            } else if (this.gameState === GAME_STATE.RESULT) {
                 // リスタートボタン判定
-                // 中央のリスタートボタン付近
-                const buttonY = this.gameWin ? CANVAS_HEIGHT / 2 + 130 : CANVAS_HEIGHT / 2 + 60;
+                const buttonY = CANVAS_HEIGHT / 2 + 130;
                 if (canvasX > CANVAS_WIDTH / 2 - 100 && canvasX < CANVAS_WIDTH / 2 + 100 &&
                     canvasY > buttonY && canvasY < buttonY + 50) {
-                    location.reload(); // シンプルにリロードしてリスタート
+                    location.reload();
                 }
             }
         };
@@ -152,10 +157,15 @@ class Game {
                 handleCanvasInput(touch.clientX, touch.clientY);
             }
 
-            // スクロール防止
-            const firstY = e.changedTouches[0] ? (e.changedTouches[0].clientY - this.canvas.getBoundingClientRect().top) * scaleY : CANVAS_HEIGHT;
-            if (firstY < CANVAS_HEIGHT - 100) {
-                e.preventDefault();
+            // スクロール防止用のY座標判定
+            const firstTouch = e.changedTouches[0];
+            if (firstTouch) {
+                const rect = this.canvas.getBoundingClientRect();
+                const scaleY = CANVAS_HEIGHT / rect.height;
+                const canvasY = (firstTouch.clientY - rect.top) * scaleY;
+                if (canvasY < CANVAS_HEIGHT - 100) {
+                    e.preventDefault();
+                }
             }
         }, { passive: false });
 
@@ -172,6 +182,28 @@ class Game {
                 }
             }
         });
+    }
+
+    initAudio() {
+        if (!this.audioCtx) {
+            this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const loadSE = (path) => fetch(path)
+                .then(r => r.arrayBuffer())
+                .then(buf => this.audioCtx.decodeAudioData(buf));
+            loadSE('soundeffect/cracker_3.mp3').then(b => { this.hitSEBuffer = b; }).catch(e => console.error('Hit SE load failed:', e));
+            loadSE('soundeffect/winse.mp3').then(b => { this.winSEBuffer = b; }).catch(e => console.error('Win SE load failed:', e));
+            loadSE('soundeffect/losese.mp3').then(b => { this.loseSEBuffer = b; }).catch(e => console.error('Lose SE load failed:', e));
+            loadSE('soundeffect/laser.mp3').then(b => { this.laserSEBuffer = b; }).catch(e => console.error('Laser SE load failed:', e));
+            loadSE('soundeffect/padolstrech.mp3').then(b => { this.paddleStretchSEBuffer = b; }).catch(e => console.error('Paddle SE load failed:', e));
+            loadSE('soundeffect/levelup.mp3').then(b => { this.levelupSEBuffer = b; }).catch(e => console.error('LevelUp SE load failed:', e));
+            this.bgm.play().catch(e => console.error("Audio playback failed:", e));
+        }
+    }
+
+    startGame() {
+        this.gameState = GAME_STATE.PLAYING;
+        this.gameStarted = true;
+        this.entranceEndTime = Date.now() + 500;
     }
 
     showTutorial(step, brick = null) {
@@ -191,6 +223,8 @@ class Game {
         if (this.tutorialState > 0) return; // チュートリアル中は停止
         if (this.levelingUp || this.paused) return; // レベルアップ・ポーズ中は停止
 
+        this.paddle.width = this.player.defense;
+        this.paddle.speed = this.player.speed;
         this.paddle.update();
         this.ball.update();
         this.effectManager.update();
@@ -378,23 +412,31 @@ class Game {
     draw() {
         this.ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
         
-        // 背景
-        this.ctx.fillStyle = '#111';
-        this.ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+        if (this.gameState === GAME_STATE.TITLE) {
+            this.drawTitleScreen();
+        } else if (this.gameState === GAME_STATE.CHAR_SELECT) {
+            this.drawCharSelectScreen();
+        } else if (this.gameState === GAME_STATE.STAGE_SELECT) {
+            this.drawStageSelectScreen();
+        } else {
+            // 背景
+            this.ctx.fillStyle = '#111';
+            this.ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-        // 必殺技ゲージ（パドルより先に描画して後支になるように）
-        this.drawSpecialGauge();
+            // 必殺技ゲージ（パドルより先に描画して後支になるように）
+            this.drawSpecialGauge();
 
-        this.paddle.draw(this.ctx); // ゲージより前面
-        this.ball.draw(this.ctx);
-        this.levelManager.draw(this.ctx);
-        this.effectManager.draw(this.ctx);
-        for (let item of this.items) {
-            item.draw(this.ctx);
+            this.paddle.draw(this.ctx); // ゲージより前面
+            this.ball.draw(this.ctx);
+            this.levelManager.draw(this.ctx);
+            this.effectManager.draw(this.ctx);
+            for (let item of this.items) {
+                item.draw(this.ctx);
+            }
+
+            // UI描画
+            this.drawUI();
         }
-
-        // UI描画
-        this.drawUI();
     }
 
     formatScore(score) {
@@ -506,9 +548,7 @@ class Game {
             return;
         }
 
-        if (!this.gameStarted) {
-            this.drawOverlay('Tap TO START', '#4fc3f7');
-        } else if (this.gameOver) {
+        if (this.gameOver) {
             this.drawOverlay('GAME OVER', '#ff5252');
         } else if (this.gameWin) {
             this.drawResultScreen();
@@ -1050,6 +1090,155 @@ class Game {
         ctx.font = 'bold 20px "Segoe UI"';
         ctx.textAlign = 'center';
         ctx.fillText('Tap to Restart', cx, buttonY + 33);
+    }
+
+    drawTitleScreen() {
+        const ctx = this.ctx;
+        // 背景画像描写
+        if (this.topImage.complete) {
+            ctx.drawImage(this.topImage, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+        } else {
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+        }
+
+        // オーバーレイでタイトルを少し暗く
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+        // STARTボタン
+        const btnW = 200, btnH = 60;
+        const btnX = CANVAS_WIDTH / 2 - btnW / 2;
+        const btnY = CANVAS_HEIGHT - 150;
+
+        const grad = ctx.createLinearGradient(btnX, btnY, btnX, btnY + btnH);
+        grad.addColorStop(0, '#ff9800');
+        grad.addColorStop(1, '#e65100');
+
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = '#ff9800';
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.roundRect(btnX, btnY, btnW, btnH, 30);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 24px "Segoe UI"';
+        ctx.textAlign = 'center';
+        ctx.fillText('Game Start', CANVAS_WIDTH / 2, btnY + 38);
+    }
+
+    drawCharSelectScreen() {
+        const ctx = this.ctx;
+        // タイトル画面を背景に少し暗く
+        this.drawTitleScreen();
+        ctx.fillStyle = 'rgba(0,0,0,0.7)';
+        ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+        const modalW = 340, modalH = 500;
+        const modalX = CANVAS_WIDTH / 2 - modalW / 2;
+        const modalY = CANVAS_HEIGHT / 2 - modalH / 2;
+
+        ctx.fillStyle = '#222';
+        ctx.strokeStyle = '#ff9800';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.roundRect(modalX, modalY, modalW, modalH, 20);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 22px "Segoe UI"';
+        ctx.textAlign = 'center';
+        ctx.fillText('キャラクター選択', CANVAS_WIDTH / 2, modalY + 40);
+
+        // ヤスのアイコン
+        const iconSize = 120;
+        const iconX = CANVAS_WIDTH / 2 - iconSize / 2;
+        const iconY = modalY + 70;
+        if (this.yasuImage.complete) {
+            ctx.drawImage(this.yasuImage, iconX, iconY, iconSize, iconSize);
+        }
+        
+        ctx.fillStyle = '#ffeb3b';
+        ctx.font = 'bold 20px "Segoe UI"';
+        ctx.fillText('熱血ルーキー ヤス', CANVAS_WIDTH / 2, iconY + iconSize + 30);
+
+        // ステータス表示
+        const stats = [
+            { label: 'Level', value: '1' },
+            { label: '攻撃力', value: '10' },
+            { label: 'スピード', value: '1.0' },
+            { label: '防御力', value: '100' }
+        ];
+
+        stats.forEach((stat, i) => {
+            const sy = iconY + iconSize + 70 + i * 35;
+            ctx.fillStyle = '#aaa';
+            ctx.font = '16px "Segoe UI"';
+            ctx.textAlign = 'left';
+            ctx.fillText(stat.label, modalX + 40, sy);
+            ctx.fillStyle = '#fff';
+            ctx.textAlign = 'right';
+            ctx.fillText(stat.value, modalX + modalW - 40, sy);
+        });
+
+        // 選択ボタン
+        const btnW = 120, btnH = 45;
+        const btnX = CANVAS_WIDTH / 2 - btnW / 2;
+        const btnY = modalY + modalH - 70;
+        ctx.fillStyle = '#4caf50';
+        ctx.beginPath();
+        ctx.roundRect(btnX, btnY, btnW, btnH, 10);
+        ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 18px "Segoe UI"';
+        ctx.fillText('選択', CANVAS_WIDTH / 2, btnY + 28);
+    }
+
+    drawStageSelectScreen() {
+        const ctx = this.ctx;
+        ctx.fillStyle = '#111';
+        ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 28px "Segoe UI"';
+        ctx.textAlign = 'center';
+        ctx.fillText('ステージ選択', CANVAS_WIDTH / 2, 80);
+
+        // Stage 1: 池袋
+        const s1X = 50, s1Y = 150, s1W = 350, s1H = 80;
+        ctx.fillStyle = 'rgba(76, 175, 80, 0.2)';
+        ctx.strokeStyle = '#4caf50';
+        ctx.beginPath();
+        ctx.roundRect(s1X, s1Y, s1W, s1H, 10);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 22px "Segoe UI"';
+        ctx.textAlign = 'left';
+        ctx.fillText('Stage 1: 池袋', s1X + 20, s1Y + 35);
+        ctx.font = '14px "Segoe UI"';
+        ctx.fillStyle = '#aaa';
+        ctx.fillText('難易度: ★☆☆☆☆', s1X + 20, s1Y + 60);
+
+        // Coming Soon
+        for (let i = 1; i <= 4; i++) {
+            const sy = 150 + i * 100;
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+            ctx.strokeStyle = '#444';
+            ctx.beginPath();
+            ctx.roundRect(s1X, sy, s1W, s1H, 10);
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.fillStyle = '#555';
+            ctx.font = 'bold 20px "Segoe UI"';
+            ctx.textAlign = 'center';
+            ctx.fillText('Coming Soon...', CANVAS_WIDTH / 2, sy + 48);
+        }
     }
 }
 

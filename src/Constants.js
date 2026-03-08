@@ -37,3 +37,11 @@ export const RESPAWN_TIME_EDGE = 30000;
 
 export const MONEY_DROP_RATE = 0.3; // 30% chance to drop money on block destroy
 export const MAGNET_RADIUS = 60; // Distance from paddle to start suction
+
+export const GAME_STATE = {
+    TITLE: 'TITLE',
+    CHAR_SELECT: 'CHAR_SELECT',
+    STAGE_SELECT: 'STAGE_SELECT',
+    PLAYING: 'PLAYING',
+    RESULT: 'RESULT'
+};
