@@ -35,20 +35,16 @@ class Game {
         this.lastSETime = 0; // SE再生の連打制限用
         this.lastLaserTime = 0; // 前回のレーザー発射時刻
 
-        // BGMの設定（ベースパス対応のため相対パスに修正）
+        // Web Audio API（SE用）
+        this.audioCtx = null;    // ユーザー操作後に初期化
+        this.hitSEBuffer = null; // ヒットSEのバッファ（山次だけデコード）
+
+        // BGM（長い曲は挐8り引きの HTMLAudio で受ける）
         this.bgm = new Audio('BURNING ADRENALINE.mp3');
         this.bgm.loop = true;
         this.bgm.volume = 0.5;
 
-        // SEの設定（プール方式に変更）
-        this.hitPoolSize = 10;
-        this.hitSEPool = [];
-        for (let i = 0; i < this.hitPoolSize; i++) {
-            const se = new Audio('soundeffect/cracker_3.mp3');
-            se.volume = 0.6;
-            this.hitSEPool.push(se);
-        }
-
+        // ゲーム結果 SE（頂点のないシンプル再生なので HTMLAudioで十分）
         this.winSE = new Audio('soundeffect/winse.mp3');
         this.winSE.volume = 0.5;
         this.loseSE = new Audio('soundeffect/losese.mp3');
@@ -62,6 +58,16 @@ class Game {
         const startHandler = (e) => {
             if (!this.gameStarted) {
                 this.gameStarted = true;
+
+                // Web Audio の初期化（ユーザー操作後に必須）
+                this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                // ヒットSEをバッファにロード（デコードは一回だけ）
+                fetch('soundeffect/cracker_3.mp3')
+                    .then(r => r.arrayBuffer())
+                    .then(buf => this.audioCtx.decodeAudioData(buf))
+                    .then(decoded => { this.hitSEBuffer = decoded; })
+                    .catch(e => console.error('SE load failed:', e));
+
                 this.bgm.play().catch(e => console.error("Audio playback failed:", e));
                 this.canvas.removeEventListener('click', startHandler);
                 this.canvas.removeEventListener('touchstart', startHandler);
@@ -414,19 +420,18 @@ class Game {
 
     playHitSE() {
         const now = Date.now();
-        if (now - this.lastSETime < 40) return; // 40ms以内の連打は無視して負荷軽減
+        if (now - this.lastSETime < 40) return; // 40ms以内の連打は無視
         this.lastSETime = now;
 
-        // プールから再生中でない（または終了した）SEを探す
-        const se = this.hitSEPool.find(audio => audio.paused || audio.ended);
-        if (se) {
-            se.currentTime = 0;
-            se.play().catch(e => console.error("SE playback failed:", e));
-        } else {
-            // 全て再生中の場合は、一番古いものを再利用（簡易版）
-            const oldest = this.hitSEPool[0];
-            oldest.currentTime = 0;
-            oldest.play().catch(e => console.error("SE playback failed:", e));
+        // Web Audio APIで即時再生（メインスレッドに影響なし）
+        if (this.audioCtx && this.hitSEBuffer) {
+            const source = this.audioCtx.createBufferSource();
+            source.buffer = this.hitSEBuffer;
+            const gainNode = this.audioCtx.createGain();
+            gainNode.gain.value = 0.6;
+            source.connect(gainNode);
+            gainNode.connect(this.audioCtx.destination);
+            source.start();
         }
     }
 
