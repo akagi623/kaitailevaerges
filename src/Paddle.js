@@ -10,6 +10,8 @@ export class Paddle {
         
         this.rightPressed = false;
         this.leftPressed = false;
+        this.touchStartX = null;  // プニコン式タッチの基点
+        this.paddleStartX = this.x;
 
         this.setupEventListeners();
     }
@@ -26,33 +28,43 @@ export class Paddle {
             if (e.key === 'Left' || e.key === 'ArrowLeft') this.leftPressed = false;
         });
 
-        // マウス移動（キャンバスのレスポンシブ対応版）
-        const handleMove = (clientX) => {
+        // マウス移動（PC用：絶対位置方式）
+        document.addEventListener('mousemove', (e) => {
             const rect = canvas.getBoundingClientRect();
-            // 画面上の位置をキャンバス内部の座標（0-800）に変換
             const scaleX = CANVAS_WIDTH / rect.width;
-            const relativeX = (clientX - rect.left) * scaleX;
-            
+            const relativeX = (e.clientX - rect.left) * scaleX;
             if (relativeX > 0 && relativeX < CANVAS_WIDTH) {
                 this.x = relativeX - this.width / 2;
             }
-        };
-
-        document.addEventListener('mousemove', (e) => {
-            handleMove(e.clientX);
         });
 
-        // タッチ操作への対応
+        // ---- プニコン式タッチ操作 ----
+        // タッチ開始時：指の位置とパドル位置を基点として記録
         document.addEventListener('touchstart', (e) => {
-            if (e.touches.length > 0) handleMove(e.touches[0].clientX);
-        }, { passive: false });
-
-        document.addEventListener('touchmove', (e) => {
             if (e.touches.length > 0) {
-                handleMove(e.touches[0].clientX);
-                e.preventDefault(); // スクロール防止
+                const rect = canvas.getBoundingClientRect();
+                const scaleX = CANVAS_WIDTH / rect.width;
+                this.touchStartX = e.touches[0].clientX; // 画面上の絶対ピクセル
+                this.paddleStartX = this.x;               // その時のパドル位置
             }
         }, { passive: false });
+
+        // タッチ移動時：最初からの差分をパドルに適用
+        document.addEventListener('touchmove', (e) => {
+            if (e.touches.length > 0 && this.touchStartX !== null) {
+                const rect = canvas.getBoundingClientRect();
+                const scaleX = CANVAS_WIDTH / rect.width;
+                const deltaX = (e.touches[0].clientX - this.touchStartX) * scaleX;
+                this.x = this.paddleStartX + deltaX;
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        // タッチ終了時：基点をリセット
+        document.addEventListener('touchend', () => {
+            this.touchStartX = null;
+            this.paddleStartX = this.x;
+        });
     }
 
     update() {
