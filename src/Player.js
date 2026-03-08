@@ -15,6 +15,41 @@ export class Player {
         this.equippedId = null;   // 装備中のID
     }
 
+    // ステータスをレベル1の状態にリセット（所持金・装備は維持）
+    resetLevelAndStats() {
+        this.level = 1;
+        this.exp = 0;
+        this.expToNextLevel = 100;
+        this.attack = 10;
+        this.speed = 8;
+        this.defense = 100;
+    }
+
+    // データの保存
+    save() {
+        const data = {
+            money: this.money,
+            ownedEquipment: this.ownedEquipment,
+            equippedId: this.equippedId
+        };
+        localStorage.setItem('antigravity_save_data', JSON.stringify(data));
+    }
+
+    // データの読み込み
+    load() {
+        const savedData = localStorage.getItem('antigravity_save_data');
+        if (savedData) {
+            try {
+                const data = JSON.parse(savedData);
+                if (data.money !== undefined) this.money = data.money;
+                if (data.ownedEquipment) this.ownedEquipment = data.ownedEquipment;
+                if (data.equippedId !== undefined) this.equippedId = data.equippedId;
+            } catch (e) {
+                console.error("Save data load failed:", e);
+            }
+        }
+    }
+
     // 装備を含む合計攻撃力を取得
     getTotalAttack(equipmentDataList) {
         let boost = 0;

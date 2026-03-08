@@ -42,6 +42,10 @@ class Game {
         // リスナー登録
         this.setupStartListener();
         
+        // プレイヤー初期化とロード
+        this.player = new Player();
+        this.player.load();
+        
         // ゲーム変数リセット
         this.resetGameStatus();
         
@@ -52,7 +56,7 @@ class Game {
 
     // ゲーム変数（ステータス）の初期化
     resetGameStatus() {
-        this.player = new Player();
+        this.player.resetLevelAndStats();
         this.paddle = new Paddle(this.player.defense);
         this.ball = new Ball(CANVAS_WIDTH / 2, CANVAS_HEIGHT - 50, BALL_INITIAL_SPEED, -BALL_INITIAL_SPEED);
         this.levelManager = new LevelManager();
@@ -238,7 +242,7 @@ class Game {
 
     startGame(stageId = STAGE_ID.IKEBUKURO) {
         if (stageId === STAGE_ID.SHIBUYA) {
-            this.player = new Player();
+            this.player.resetLevelAndStats();
             this.paddle.width = this.player.defense;
             this.paddle.speed = this.player.speed;
         }
@@ -362,6 +366,7 @@ class Game {
                 if (!this.bonusAdded) {
                     this.player.money += this.clearBonus;
                     this.bonusAdded = true;
+                    this.player.save(); // クリアボーナス獲得後にセーブ
                 }
                 this.playWebAudioSE(this.winSEBuffer, 0.5);
                 this.stopBGM();
@@ -398,6 +403,7 @@ class Game {
                     this.playWebAudioSE(this.paddleStretchSEBuffer, 0.7);
                 } else if (item.type === ITEM_TYPES.MONEY) {
                     this.player.money += 100; // 金額設定
+                    this.player.save(); // お金拾った時にセーブ
                     // SE（短いビープ）
                     if (this.audioCtx) {
                         const osc = this.audioCtx.createOscillator();
@@ -1405,10 +1411,12 @@ class Game {
                 const isOwned = this.player.ownedEquipment.includes(item.id);
                 if (isOwned) {
                     this.player.equippedId = item.id;
+                    this.player.save(); // 装備変更時にセーブ
                 } else if (this.player.money >= item.price) {
                     this.player.money -= item.price;
                     this.player.ownedEquipment.push(item.id);
                     this.player.equippedId = item.id;
+                    this.player.save(); // 購入時にセーブ
                     // 購入SEがあれば再生
                     if (this.audioCtx) {
                         const osc = this.audioCtx.createOscillator();
