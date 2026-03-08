@@ -29,12 +29,15 @@ export class Brick {
         }
     }
 
-    update(deltaTime) {
+    update(deltaTime, onRespawn) {
         if (!this.active && !this.isIssue) {
             this.respawnTimer -= deltaTime;
             if (this.respawnTimer <= 0) {
                 this.active = true;
                 this.hp = this.maxHp;
+                if (onRespawn) {
+                    onRespawn(this);
+                }
             }
         }
     }

@@ -7,26 +7,32 @@ import { Brick } from './Brick.js';
 export class LevelManager {
     constructor() {
         this.bricks = [];
+        this.issueSpawned = false;
         this.init();
     }
 
     init() {
         this.bricks = [];
-        const totalBricks = BRICK_ROWS * BRICK_COLS;
-        const issueIndex = Math.floor(Math.random() * totalBricks);
+        this.issueSpawned = false;
 
         for (let r = 0; r < BRICK_ROWS; r++) {
             for (let c = 0; c < BRICK_COLS; c++) {
                 const brickX = (c * (BRICK_WIDTH + BRICK_PADDING)) + BRICK_OFFSET_LEFT;
                 const brickY = (r * (BRICK_HEIGHT + BRICK_PADDING)) + BRICK_OFFSET_TOP;
                 
-                const index = r * BRICK_COLS + c;
-                const isIssue = (index === issueIndex);
+                // 初回はすべてイシューブロックではない
+                const isIssue = false;
                 const isEdge = (c === 0 || c === BRICK_COLS - 1);
                 
-                const hp = isIssue ? ISSUE_BRICK_HP : Math.floor(Math.random() * 31) + 20;
+                // 中央付近（内側4列×内側3行などを想定）
+                // c: 1〜4, r: 2〜4 がおおよそ中央。
+                const isCenterTarget = (c >= 1 && c <= BRICK_COLS - 2 && r >= 2 && r <= BRICK_ROWS - 3);
+                
+                const hp = Math.floor(Math.random() * 31) + 20;
 
-                this.bricks.push(new Brick(brickX, brickY, hp, isIssue, isEdge));
+                const brick = new Brick(brickX, brickY, hp, isIssue, isEdge);
+                brick.isCenterTarget = isCenterTarget;
+                this.bricks.push(brick);
             }
         }
     }
@@ -61,7 +67,14 @@ export class LevelManager {
 
     update(deltaTime) {
         for (let brick of this.bricks) {
-            brick.update(deltaTime);
+            brick.update(deltaTime, (respawnedBrick) => {
+                if (!this.issueSpawned && respawnedBrick.isCenterTarget) {
+                    this.issueSpawned = true;
+                    respawnedBrick.isIssue = true;
+                    respawnedBrick.hp = ISSUE_BRICK_HP;
+                    respawnedBrick.maxHp = ISSUE_BRICK_HP;
+                }
+            });
         }
     }
 
