@@ -10,7 +10,8 @@ export class Paddle {
         
         this.rightPressed = false;
         this.leftPressed = false;
-        this.touchStartX = null;  // プニコン式タッチの基点
+        this.trackingTouchId = null; // 追跡中の指のID
+        this.touchStartX = null;
         this.paddleStartX = this.x;
 
         this.setupEventListeners();
@@ -38,32 +39,37 @@ export class Paddle {
             }
         });
 
-        // ---- プニコン式タッチ操作 ----
-        // タッチ開始時：指の位置とパドル位置を基点として記録
+        // ---- プニコン式タッチ操作（指IDで追跡してスナップなし） ----
         document.addEventListener('touchstart', (e) => {
-            if (e.touches.length > 0) {
-                const rect = canvas.getBoundingClientRect();
-                const scaleX = CANVAS_WIDTH / rect.width;
-                this.touchStartX = e.touches[0].clientX; // 画面上の絶対ピクセル
-                this.paddleStartX = this.x;               // その時のパドル位置
+            // まだ追跡していない場合のみ、新しく触れた指を基点として記録
+            if (this.trackingTouchId === null) {
+                const touch = e.changedTouches[0]; // 新しく置かれた指だけ見る
+                this.trackingTouchId = touch.identifier;
+                this.touchStartX = touch.clientX;
+                this.paddleStartX = this.x; // 今のパドル位置が起点
             }
         }, { passive: false });
 
-        // タッチ移動時：最初からの差分をパドルに適用
         document.addEventListener('touchmove', (e) => {
-            if (e.touches.length > 0 && this.touchStartX !== null) {
+            // 追跡中の指を探して移動量を適用
+            const touch = Array.from(e.touches).find(t => t.identifier === this.trackingTouchId);
+            if (touch) {
                 const rect = canvas.getBoundingClientRect();
                 const scaleX = CANVAS_WIDTH / rect.width;
-                const deltaX = (e.touches[0].clientX - this.touchStartX) * scaleX;
+                const deltaX = (touch.clientX - this.touchStartX) * scaleX;
                 this.x = this.paddleStartX + deltaX;
                 e.preventDefault();
             }
         }, { passive: false });
 
-        // タッチ終了時：基点をリセット
-        document.addEventListener('touchend', () => {
-            this.touchStartX = null;
-            this.paddleStartX = this.x;
+        document.addEventListener('touchend', (e) => {
+            // 追跡中の指が離れたらリセット
+            const released = Array.from(e.changedTouches).find(t => t.identifier === this.trackingTouchId);
+            if (released) {
+                this.trackingTouchId = null;
+                this.touchStartX = null;
+                this.paddleStartX = this.x;
+            }
         });
     }
 

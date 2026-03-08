@@ -117,12 +117,36 @@ class Game {
         
         this.canvas.addEventListener('click', startHandler);
         this.canvas.addEventListener('touchstart', (e) => {
-            startHandler(e);
-            // パドル操作と被らないように、上の方のタップならpreventDefaultする
             const rect = this.canvas.getBoundingClientRect();
-            const clientY = e.touches[0].clientY;
-            const canvasY = (clientY - rect.top) * (CANVAS_HEIGHT / rect.height);
-            if (canvasY < CANVAS_HEIGHT - 100) {
+            const scaleX = CANVAS_WIDTH / rect.width;
+            const scaleY = CANVAS_HEIGHT / rect.height;
+
+            // 新しく置かれた指（changedTouches）を全てチェック
+            for (const touch of e.changedTouches) {
+                const canvasX = (touch.clientX - rect.left) * scaleX;
+                const canvasY = (touch.clientY - rect.top) * scaleY;
+
+                if (!this.gameStarted && Date.now() >= this.entranceEndTime) {
+                    // ゲーム開始タップ
+                    startHandler(e);
+                    break;
+                } else if (this.gameStarted && !this.gameOver && !this.gameWin) {
+                    // 必殺技ボタン判定（左下：x < 155, y > CANVAS_HEIGHT - 65）
+                    if (canvasX < 155 && canvasY > CANVAS_HEIGHT - 65) {
+                        this.fireLaser();
+                    }
+                } else if (this.gameOver || this.gameWin) {
+                    // リスタートボタン判定
+                    if (canvasX > CANVAS_WIDTH / 2 - 100 && canvasX < CANVAS_WIDTH / 2 + 100 &&
+                        canvasY > CANVAS_HEIGHT / 2 + 60 && canvasY < CANVAS_HEIGHT / 2 + 110) {
+                        location.reload();
+                    }
+                }
+            }
+
+            // スクロール防止
+            const firstY = e.changedTouches[0] ? (e.changedTouches[0].clientY - this.canvas.getBoundingClientRect().top) * scaleY : CANVAS_HEIGHT;
+            if (firstY < CANVAS_HEIGHT - 100) {
                 e.preventDefault();
             }
         }, { passive: false });

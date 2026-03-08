@@ -3,7 +3,7 @@ export const CANVAS_HEIGHT = 800;
 
 export const COLORS = {
     BALL: '#ffffff',
-    PADDLE: '#4fc3f7',
+    PADDLE: '#ff9800',
     BRICK_HP1: '#e57373',
     BRICK_HP2: '#f06292',
     BRICK_HP3: '#ba68c8',
