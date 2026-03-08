@@ -39,6 +39,7 @@ class Game {
         this.lastLaserTime = 0;
         this.levelingUp = false;     // レベルアップ中フラグ
         this.selectedStat = null;    // 選択したステータス ('attack'/'speed'/'defense')
+        this.paused = false;         // 一時停止フラグ
 
         // Web Audio API（SE用）
         this.audioCtx = null;    // ユーザー操作後に初期化
@@ -137,12 +138,18 @@ class Game {
                     startHandler(e);
                     break;
                 } else if (this.gameStarted && !this.gameOver && !this.gameWin) {
-                    if (this.levelingUp) {
+                    if (this.paused) {
+                        // ポーズ画面のタッチ（再開ボタンなど）
+                        this.handlePauseTouch(canvasX, canvasY);
+                    } else if (this.levelingUp) {
                         // レベルアップ選択画面のボタン判定
                         this.handleLevelUpTouch(canvasX, canvasY);
                     } else {
+                        // ⏸ ポーズボタン判定（右上）
+                        if (canvasX > CANVAS_WIDTH - 50 && canvasY < 40) {
+                            this.paused = true;
                         // 必殺技ボタン判定（左下：x < 155, y > CANVAS_HEIGHT - 65）
-                        if (canvasX < 155 && canvasY > CANVAS_HEIGHT - 65) {
+                        } else if (canvasX < 155 && canvasY > CANVAS_HEIGHT - 65) {
                             this.fireLaser();
                         }
                     }
@@ -162,17 +169,20 @@ class Game {
             }
         }, { passive: false });
 
-        // スペースキーで必殺技
+        // スペースキーで必殺技 / ESCでポーズ
         window.addEventListener('keydown', (e) => {
-            if (e.code === 'Space' && this.gameStarted && !this.gameOver && !this.gameWin) {
+            if (e.code === 'Space' && this.gameStarted && !this.gameOver && !this.gameWin && !this.paused) {
                 this.fireLaser();
+            }
+            if (e.code === 'Escape' && this.gameStarted && !this.gameOver && !this.gameWin && !this.levelingUp) {
+                this.paused = !this.paused;
             }
         });
     }
 
     update(deltaTime) {
         if (!this.gameStarted || this.gameOver || this.gameWin || Date.now() < this.entranceEndTime) return;
-        if (this.levelingUp) return; // レベルアップ選択中は停止
+        if (this.levelingUp || this.paused) return; // レベルアップ・ポーズ中は停止
 
         this.paddle.update();
         this.ball.update();
@@ -333,7 +343,21 @@ class Game {
         this.ctx.textAlign = 'left';
         this.ctx.fillText(`Score: ${this.formatScore(this.score)}`, 15, 28);
         this.ctx.textAlign = 'right';
-        this.ctx.fillText(`Lives: ${this.lives}`, CANVAS_WIDTH - 15, 28);
+        this.ctx.fillText(`Lives: ${this.lives}`, CANVAS_WIDTH - 55, 28); // ポーズボタン分左にずらす
+
+        // ポーズボタン（右上）ゲームプレイ中のみ表示
+        if (this.gameStarted && !this.gameOver && !this.gameWin) {
+            const px = CANVAS_WIDTH - 44;
+            const py = 8;
+            this.ctx.fillStyle = 'rgba(255,255,255,0.15)';
+            this.ctx.beginPath();
+            this.ctx.roundRect(px, py, 36, 26, 5);
+            this.ctx.fill();
+            this.ctx.fillStyle = '#fff';
+            this.ctx.font = 'bold 14px "Segoe UI"';
+            this.ctx.textAlign = 'center';
+            this.ctx.fillText('⏸', px + 18, py + 19);
+        }
 
         // 2行目: LEVERAGEの表示
         const displayCombo = this.combo > 0 ? this.combo : this.lastCombo;
@@ -382,6 +406,12 @@ class Game {
             return;
         }
 
+        // ポーズ画面
+        if (this.paused) {
+            this.drawPauseScreen();
+            return;
+        }
+
         // レベルアップ選択画面
         if (this.levelingUp) {
             this.drawLevelUpScreen();
@@ -403,6 +433,72 @@ class Game {
         this.selectedStat = null;
         if (this.bgm && !this.bgm.paused) this.bgm.volume = 0.15;
         this.playWebAudioSE(this.levelupSEBuffer, 0.8);
+    }
+
+    drawPauseScreen() {
+        const ctx = this.ctx;
+        const cx = CANVAS_WIDTH / 2, cy = CANVAS_HEIGHT / 2;
+
+        // 半透明オーバーレイ
+        ctx.fillStyle = 'rgba(0,0,0,0.78)';
+        ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+        // タイトル
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 28px "Segoe UI"';
+        ctx.textAlign = 'center';
+        ctx.fillText('⏸ PAUSE', cx, cy - 160);
+
+        // ステータスパネル
+        const panelW = 280, panelH = 200;
+        const panelX = cx - panelW / 2, panelY = cy - 130;
+        ctx.fillStyle = 'rgba(255,255,255,0.07)';
+        ctx.beginPath();
+        ctx.roundRect(panelX, panelY, panelW, panelH, 10);
+        ctx.fill();
+
+        const p = this.player;
+        const rows = [
+            { label: 'Lv', value: `${p.level}` },
+            { label: 'Exp', value: `${p.exp} / ${p.expToNextLevel}` },
+            { label: '攻撃力', value: `${p.attack}`, color: '#ff7043' },
+            { label: 'スピード', value: `${p.speed}`, color: '#ffeb3b' },
+            { label: '守備力  (パドル幅)', value: `${p.defense}`, color: '#4fc3f7' },
+        ];
+        rows.forEach((row, i) => {
+            const ry = panelY + 35 + i * 33;
+            ctx.fillStyle = '#aaa';
+            ctx.font = '14px "Segoe UI"';
+            ctx.textAlign = 'left';
+            ctx.fillText(row.label, panelX + 20, ry);
+            ctx.fillStyle = row.color || '#fff';
+            ctx.font = 'bold 16px "Segoe UI"';
+            ctx.textAlign = 'right';
+            ctx.fillText(row.value, panelX + panelW - 20, ry);
+        });
+
+        // 再開ボタン
+        const resumeY = panelY + panelH + 20;
+        ctx.fillStyle = '#4caf50';
+        ctx.beginPath();
+        ctx.roundRect(cx - 90, resumeY, 180, 50, 8);
+        ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 18px "Segoe UI"';
+        ctx.textAlign = 'center';
+        ctx.fillText('▶ 再開', cx, resumeY + 33);
+    }
+
+    handlePauseTouch(canvasX, canvasY) {
+        const cy = CANVAS_HEIGHT / 2;
+        const panelH = 200;
+        const panelY = cy - 130;
+        const resumeY = panelY + panelH + 20;
+        const cx = CANVAS_WIDTH / 2;
+        if (canvasX >= cx - 90 && canvasX <= cx + 90 &&
+            canvasY >= resumeY && canvasY <= resumeY + 50) {
+            this.paused = false;
+        }
     }
 
     handleLevelUpTouch(canvasX, canvasY) {
