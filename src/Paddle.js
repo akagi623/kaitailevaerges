@@ -5,7 +5,7 @@ export class Paddle {
         this.width = PADDLE_WIDTH;
         this.height = PADDLE_HEIGHT;
         this.x = (CANVAS_WIDTH - this.width) / 2;
-        this.y = CANVAS_HEIGHT - this.height - 20;
+        this.y = CANVAS_HEIGHT - this.height - 48; // パドルを1ブロック分上に
         this.color = COLORS.PADDLE;
         
         this.rightPressed = false;

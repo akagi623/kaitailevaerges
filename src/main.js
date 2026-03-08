@@ -37,18 +37,14 @@ class Game {
 
         // Web Audio API（SE用）
         this.audioCtx = null;    // ユーザー操作後に初期化
-        this.hitSEBuffer = null; // ヒットSEのバッファ（山次だけデコード）
+        this.hitSEBuffer = null; // ヒットSE
+        this.winSEBuffer = null; // クリアSE
+        this.loseSEBuffer = null; // ゲームオーバーSE
 
-        // BGM（長い曲は挐8り引きの HTMLAudio で受ける）
+        // BGM（長い曲は streaming の HTMLAudio で再生）
         this.bgm = new Audio('BURNING ADRENALINE.mp3');
         this.bgm.loop = true;
         this.bgm.volume = 0.5;
-
-        // ゲーム結果 SE（頂点のないシンプル再生なので HTMLAudioで十分）
-        this.winSE = new Audio('soundeffect/winse.mp3');
-        this.winSE.volume = 0.5;
-        this.loseSE = new Audio('soundeffect/losese.mp3');
-        this.loseSE.volume = 0.5;
 
         this.setupStartListener();
         this.loop(0);
@@ -61,12 +57,15 @@ class Game {
 
                 // Web Audio の初期化（ユーザー操作後に必須）
                 this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                // ヒットSEをバッファにロード（デコードは一回だけ）
-                fetch('soundeffect/cracker_3.mp3')
+
+                // SE ファイルを全てバッファにロード（デコードは一回だけ）
+                const loadSE = (path) => fetch(path)
                     .then(r => r.arrayBuffer())
-                    .then(buf => this.audioCtx.decodeAudioData(buf))
-                    .then(decoded => { this.hitSEBuffer = decoded; })
-                    .catch(e => console.error('SE load failed:', e));
+                    .then(buf => this.audioCtx.decodeAudioData(buf));
+
+                loadSE('soundeffect/cracker_3.mp3').then(b => { this.hitSEBuffer = b; }).catch(e => console.error('Hit SE load failed:', e));
+                loadSE('soundeffect/winse.mp3').then(b => { this.winSEBuffer = b; }).catch(e => console.error('Win SE load failed:', e));
+                loadSE('soundeffect/losese.mp3').then(b => { this.loseSEBuffer = b; }).catch(e => console.error('Lose SE load failed:', e));
 
                 this.bgm.play().catch(e => console.error("Audio playback failed:", e));
                 this.canvas.removeEventListener('click', startHandler);
@@ -181,7 +180,7 @@ class Game {
             
             if (this.levelManager.areAllBricksCleared() && !this.gameWin) {
                 this.gameWin = true;
-                this.winSE.play().catch(e => console.error("Win SE failed:", e));
+                this.playWebAudioSE(this.winSEBuffer, 0.5);
                 this.stopBGM();
             }
         }
@@ -242,9 +241,8 @@ class Game {
             this.combo = 0; // コンボリセット（lastComboは保持される）
             if (this.lives <= 0 && !this.gameOver) {
                 this.gameOver = true;
-                this.bgm.volume = 0.1; // SEが聞こえやすいように即座に音量を下げる
-                this.loseSE.play().catch(e => console.error("Lose SE failed:", e));
                 this.stopBGM();
+                this.playWebAudioSE(this.loseSEBuffer, 0.5);
             } else {
                 // リセット
                 this.speedMultiplier = 1.0; // スピードリセット
@@ -299,9 +297,9 @@ class Game {
         if (displayCombo > 0) {
             const label = displayCombo >= 2 ? 'LEVERAGES!' : 'LEVERAGE!';
             this.ctx.fillStyle = this.combo > 0 ? '#ffeb3b' : '#9e9e9e';
-            this.ctx.font = 'bold 16px "Segoe UI"';
+            this.ctx.font = 'bold 22px "Segoe UI"'; // 大きめに
             this.ctx.textAlign = 'center';
-            this.ctx.fillText(`${displayCombo} ${label}`, CANVAS_WIDTH / 2, 50);
+            this.ctx.fillText(`${displayCombo} ${label}`, CANVAS_WIDTH / 2, 58); // 少し下げる
         }
 
         // 必殺技ゲージの描画
@@ -413,9 +411,20 @@ class Game {
         // クリア判定
         if (this.levelManager.areAllBricksCleared()) {
             this.gameWin = true;
-            this.winSE.play().catch(e => console.error("Win SE failed:", e));
+            this.playWebAudioSE(this.winSEBuffer, 0.5);
             this.stopBGM();
         }
+    }
+
+    playWebAudioSE(buffer, volume = 0.6) {
+        if (!this.audioCtx || !buffer) return;
+        const source = this.audioCtx.createBufferSource();
+        source.buffer = buffer;
+        const gain = this.audioCtx.createGain();
+        gain.gain.value = volume;
+        source.connect(gain);
+        gain.connect(this.audioCtx.destination);
+        source.start();
     }
 
     playHitSE() {

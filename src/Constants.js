@@ -23,7 +23,7 @@ export const BRICK_COLS = 6;
 export const BRICK_WIDTH = 60;
 export const BRICK_HEIGHT = 20;
 export const BRICK_PADDING = 8;
-export const BRICK_OFFSET_TOP = 60;
+export const BRICK_OFFSET_TOP = 90;  // LEVERAGEテキストの下にスペース
 export const BRICK_OFFSET_LEFT = 23;
 
 export const SPECIAL_GAUGE_MAX = 100;
