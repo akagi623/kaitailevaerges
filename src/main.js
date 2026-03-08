@@ -426,12 +426,13 @@ class Game {
 
         // 2行目: LEVERAGEの表示
         const displayCombo = this.combo > 0 ? this.combo : this.lastCombo;
-        if (displayCombo > 0) {
-            const label = displayCombo >= 2 ? 'LEVERAGES!' : 'LEVERAGE!';
-            this.ctx.fillStyle = this.combo > 0 ? '#ffeb3b' : '#9e9e9e';
+        if (displayCombo > 0 || this.tutorialState === 1.1 || this.tutorialState === 1.2) {
+            const forceCombo = displayCombo > 0 ? displayCombo : 1;
+            const label = forceCombo >= 2 ? 'LEVERAGES!' : 'LEVERAGE!';
+            this.ctx.fillStyle = forceCombo > 0 ? '#ffeb3b' : '#9e9e9e';
             this.ctx.font = 'bold 28px "Segoe UI"'; // 大きく
             this.ctx.textAlign = 'center';
-            this.ctx.fillText(`${displayCombo} ${label}`, CANVAS_WIDTH / 2, 60);
+            this.ctx.fillText(`${forceCombo} ${label}`, CANVAS_WIDTH / 2, 60);
         }
 
         // 3行目: EXPバー（左 Lv表示 + ゲージ）
@@ -885,10 +886,10 @@ class Game {
         }
         this.ctx.setLineDash([]);
 
-        // セリフボックス (下部)
+        // セリフボックス (中央)
         const boxX = 20;
         const boxH = 180;
-        const boxY = CANVAS_HEIGHT - boxH - 20;
+        const boxY = (CANVAS_HEIGHT - boxH) / 2;
         const boxW = CANVAS_WIDTH - 40;
 
         this.ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
@@ -923,7 +924,7 @@ class Game {
         // セリフ描画
         this.ctx.fillStyle = '#111';
         this.ctx.font = 'bold 20px "Segoe UI"'; // テキストを大きく
-        this.ctx.textAlign = 'center'; // 真ん中寄せ
+        this.ctx.textAlign = 'left'; // 左寄せ
         
         let textLines = [];
         if (this.tutorialState === 1.1) {
@@ -964,12 +965,13 @@ class Game {
         const lineHeight = 30;
         const startY = boxY + 45;
         for (let i = 0; i < textLines.length; i++) {
-            this.ctx.fillText(textLines[i], boxX + boxW / 2, startY + i * lineHeight);
+            this.ctx.fillText(textLines[i], boxX + 25, startY + i * lineHeight);
         }
         
         // Next/Close indicator
         this.ctx.fillStyle = '#666';
         this.ctx.font = 'bold 14px "Segoe UI"';
+        this.ctx.textAlign = 'center';
         this.ctx.fillText("▼ タップして次へ ▼", boxX + boxW / 2, boxY + boxH - 15);
     }
 }
