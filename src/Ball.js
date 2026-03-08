@@ -31,9 +31,20 @@ export class Ball {
     }
 
     draw(ctx) {
+        // 炎の様なグラデーションを描画
+        const x = this.x;
+        const y = this.y;
+        const r = this.radius;
+        const flameGradient = ctx.createRadialGradient(x, y, r * 0.1, x, y, r * 1.5);
+        flameGradient.addColorStop(0, '#ffffff');  // 中心は白
+        flameGradient.addColorStop(0.3, '#ffff00'); // 黄色
+        flameGradient.addColorStop(0.7, '#ff5722'); // オレンジ・赤
+        flameGradient.addColorStop(1, 'rgba(255, 0, 0, 0)'); // 外側は透明
+
         ctx.beginPath();
-        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-        ctx.fillStyle = this.color;
+        // 光彩の範囲まで描画するため少し大きめにArcを描く
+        ctx.arc(x, y, r * 1.5, 0, Math.PI * 2);
+        ctx.fillStyle = flameGradient;
         ctx.fill();
         ctx.closePath();
     }

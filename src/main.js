@@ -446,10 +446,6 @@ class Game {
         this.ctx.textAlign = 'left';
         this.ctx.fillText(`Score: ${this.formatScore(this.score)}`, 15, 28);
         
-        // 所持金の表示（Scoreのすぐ右）
-        this.ctx.fillStyle = '#ffdf00'; // ゴールド
-        this.ctx.fillText(`¥${this.player.money}`, 180, 28);
-
         this.ctx.fillStyle = '#fff';
         this.ctx.textAlign = 'right';
         this.ctx.fillText(`Lives: ${this.lives}`, CANVAS_WIDTH - 55, 28); // ポーズボタン分左にずらす
@@ -565,8 +561,8 @@ class Game {
         ctx.fillText('⏸ PAUSE', cx, cy - 160);
 
         // ステータスパネル
-        const panelW = 280, panelH = 200;
-        const panelX = cx - panelW / 2, panelY = cy - 130;
+        const panelW = 280, panelH = 230;
+        const panelX = cx - panelW / 2, panelY = cy - 145;
         ctx.fillStyle = 'rgba(255,255,255,0.07)';
         ctx.beginPath();
         ctx.roundRect(panelX, panelY, panelW, panelH, 10);
@@ -579,6 +575,7 @@ class Game {
             { label: '攻撃力', value: `${p.attack}`, color: '#ff7043' },
             { label: 'スピード', value: `${p.speed}`, color: '#ffeb3b' },
             { label: '守備力  (パドル幅)', value: `${p.defense}`, color: '#4fc3f7' },
+            { label: '資金', value: `¥${p.money}`, color: '#ffdf00' },
         ];
         rows.forEach((row, i) => {
             const ry = panelY + 35 + i * 33;
