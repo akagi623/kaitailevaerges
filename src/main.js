@@ -97,9 +97,10 @@ class Game {
                 }
             } else if (this.gameState === GAME_STATE.CHAR_SELECT) {
                 // キャラクター選択（ヤス：中央の選択ボタン）
-                const btnX = CANVAS_WIDTH / 2 - 60;
-                const btnY = CANVAS_HEIGHT / 2 + 150;
-                if (canvasX > btnX && canvasX < btnX + 120 && canvasY > btnY && canvasY < btnY + 45) {
+                // 判定を拡大（左右±100px程度余裕を持たせる）
+                const btnX = CANVAS_WIDTH / 2 - 120;
+                const btnY = CANVAS_HEIGHT / 2 + 140;
+                if (canvasX > btnX && canvasX < btnX + 240 && canvasY > btnY && canvasY < btnY + 70) {
                     this.gameState = GAME_STATE.STAGE_SELECT;
                 }
             } else if (this.gameState === GAME_STATE.STAGE_SELECT) {
@@ -110,40 +111,59 @@ class Game {
                     this.startGame();
                 }
             } else if (this.gameState === GAME_STATE.PLAYING) {
+                // ポーズ中・レベルアップ中・チュートリアル中は常に判定を優先
+                if (this.paused) {
+                    this.handlePauseTouch(canvasX, canvasY);
+                    return;
+                }
+                if (this.levelingUp) {
+                    this.handleLevelUpTouch(canvasX, canvasY);
+                    return;
+                }
+                if (this.tutorialState > 0) {
+                    // チュートリアルのページ送り
+                    if (this.tutorialState === 1.1) this.tutorialState = 1.2;
+                    else if (this.tutorialState === 1.2) this.tutorialState = 0;
+                    else if (this.tutorialState === 2.1) this.tutorialState = 0;
+                    else if (this.tutorialState === 3.1) this.tutorialState = 3.2;
+                    else if (this.tutorialState === 3.2) this.tutorialState = 0;
+                    else this.tutorialState = 0;
+                    return;
+                }
+
+                // ゲームオーバーまたはクリア時のボタン判定
+                if (this.gameOver || this.gameWin) {
+                    const btnW = 200, btnH = 50, cx = CANVAS_WIDTH / 2;
+                    const restartY = CANVAS_HEIGHT / 2 + 130;
+                    const titleY = CANVAS_HEIGHT / 2 + 190;
+
+                    // Restart
+                    if (canvasX > cx - 100 && canvasX < cx + 100 && canvasY > restartY && canvasY < restartY + btnH) {
+                        location.reload();
+                    }
+                    // Back to Title
+                    if (canvasX > cx - 100 && canvasX < cx + 100 && canvasY > titleY && canvasY < titleY + btnH) {
+                        this.gameState = GAME_STATE.TITLE;
+                        this.gameWin = false;
+                        this.gameOver = false;
+                        this.gameStarted = false;
+                        // 他の状態リセットが必要な場合はここで行う（今回はreloadせずに戻る実装）
+                        location.reload(); // 確実にリセットするためreload推奨だが、要望に合わせて調整
+                    }
+                    return;
+                }
+
                 if (!this.gameOver && !this.gameWin) {
                     // 入場フラッシュ時間を過ぎている場合のみ操作を受け付ける
                     if (Date.now() >= this.entranceEndTime) {
-                        if (this.tutorialState > 0) {
-                            // チュートリアルのページ送り
-                            if (this.tutorialState === 1.1) this.tutorialState = 1.2;
-                            else if (this.tutorialState === 1.2) this.tutorialState = 0;
-                            else if (this.tutorialState === 2.1) this.tutorialState = 0;
-                            else if (this.tutorialState === 3.1) this.tutorialState = 3.2;
-                            else if (this.tutorialState === 3.2) this.tutorialState = 0;
-                            else this.tutorialState = 0;
-                        } else if (this.paused) {
-                            // ポーズ画面のタッチ（再開ボタンなど）
-                            this.handlePauseTouch(canvasX, canvasY);
-                        } else if (this.levelingUp) {
-                            // レベルアップ選択画面のボタン判定
-                            this.handleLevelUpTouch(canvasX, canvasY);
-                        } else {
-                            // ⏸ ポーズボタン判定（右上）
-                            if (canvasX > CANVAS_WIDTH - 50 && canvasY < 40) {
-                                this.paused = true;
-                            // 必殺技ボタン判定（左下：x < 155, y > CANVAS_HEIGHT - 65）
-                            } else if (canvasX < 155 && canvasY > CANVAS_HEIGHT - 65) {
-                                this.fireLaser();
-                            }
+                        // ⏸ ポーズボタン判定（右上）
+                        if (canvasX > CANVAS_WIDTH - 50 && canvasY < 40) {
+                            this.paused = true;
+                        // 必殺技ボタン判定（左下）
+                        } else if (canvasX < 155 && canvasY > CANVAS_HEIGHT - 65) {
+                            this.fireLaser();
                         }
                     }
-                }
-            } else if (this.gameState === GAME_STATE.RESULT) {
-                // リスタートボタン判定
-                const buttonY = CANVAS_HEIGHT / 2 + 130;
-                if (canvasX > CANVAS_WIDTH / 2 - 100 && canvasX < CANVAS_WIDTH / 2 + 100 &&
-                    canvasY > buttonY && canvasY < buttonY + 50) {
-                    location.reload();
                 }
             }
         };
@@ -736,19 +756,33 @@ class Game {
         this.ctx.textAlign = 'center';
         this.ctx.fillText(text, CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2);
         
-        // リスタートボタンの描画（ゲーム終了時のみ）
+        // ボタンの描画
         if (this.gameOver || this.gameWin) {
-            const btnW = 200;
-            const btnH = 50;
-            const btnX = CANVAS_WIDTH / 2 - btnW / 2;
-            const btnY = CANVAS_HEIGHT / 2 + 60;
+            const btnW = 200, btnH = 50, cx = CANVAS_WIDTH / 2;
+            const restartY = CANVAS_HEIGHT / 2 + 130;
+            const titleY = CANVAS_HEIGHT / 2 + 190;
             
+            this.ctx.textAlign = 'center';
+            this.ctx.textBaseline = 'middle';
+
+            // Restart Button
             this.ctx.fillStyle = color;
-            this.ctx.fillRect(btnX, btnY, btnW, btnH);
-            
+            this.ctx.beginPath();
+            this.ctx.roundRect(cx - 100, restartY, btnW, btnH, 10);
+            this.ctx.fill();
             this.ctx.fillStyle = '#fff';
             this.ctx.font = 'bold 20px "Segoe UI"';
-            this.ctx.fillText('RESTART', CANVAS_WIDTH / 2, btnY + 33);
+            this.ctx.fillText('Tap to Restart', cx, restartY + 25);
+
+            // Back to Title Button
+            this.ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+            this.ctx.beginPath();
+            this.ctx.roundRect(cx - 100, titleY, btnW, btnH, 10);
+            this.ctx.fill();
+            this.ctx.fillStyle = '#fff';
+            this.ctx.fillText('Back to Title', cx, titleY + 25);
+            
+            this.ctx.textBaseline = 'alphabetic';
         }
     }
 
@@ -1079,7 +1113,7 @@ class Game {
             ctx.fillText(stat.value, panelX + panelW - 30, sy);
         });
 
-        // ボタン
+        // ボタン1: Tap to Restart
         const buttonY = cy + 130;
         ctx.fillStyle = '#4caf50';
         ctx.beginPath();
@@ -1089,7 +1123,18 @@ class Game {
         ctx.fillStyle = '#fff';
         ctx.font = 'bold 20px "Segoe UI"';
         ctx.textAlign = 'center';
-        ctx.fillText('Tap to Restart', cx, buttonY + 33);
+        ctx.textBaseline = 'middle';
+        ctx.fillText('Tap to Restart', cx, buttonY + 25);
+
+        // ボタン2: Back to Title
+        const titleBtnY = cy + 190;
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+        ctx.beginPath();
+        ctx.roundRect(cx - 100, titleBtnY, 200, 50, 10);
+        ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.fillText('Back to Title', cx, titleBtnY + 25);
+        ctx.textBaseline = 'alphabetic'; // 元に戻す
     }
 
     drawTitleScreen() {
@@ -1188,14 +1233,16 @@ class Game {
         const btnW = 120, btnH = 45;
         const btnX = CANVAS_WIDTH / 2 - btnW / 2;
         const btnY = modalY + modalH - 70;
-        ctx.fillStyle = '#4caf50';
+        ctx.fillStyle = this.char1Icon.complete ? '#4caf50' : '#888';
         ctx.beginPath();
         ctx.roundRect(btnX, btnY, btnW, btnH, 10);
         ctx.fill();
         ctx.fillStyle = '#fff';
         ctx.font = 'bold 18px "Segoe UI"';
         ctx.textAlign = 'center';
-        ctx.fillText('選択', CANVAS_WIDTH / 2, btnY + 28);
+        ctx.textBaseline = 'middle';
+        ctx.fillText(this.char1Icon.complete ? '選択' : 'Loading...', CANVAS_WIDTH / 2, btnY + btnH / 2);
+        ctx.textBaseline = 'alphabetic';
     }
 
     drawStageSelectScreen() {
