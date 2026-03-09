@@ -86,6 +86,11 @@ export class GameEngine {
             // Preload sprite if not loaded
             if (type.sprite && !this.sprites[type.sprite]) {
                 const img = new Image();
+                img.onload = () => {
+                    console.log(`Sprite loaded: ${type.sprite}`);
+                    this.draw(); // Force redraw once loaded
+                };
+                img.onerror = () => console.error(`Failed to load sprite: ${type.sprite}`);
                 img.src = type.sprite;
                 this.sprites[type.sprite] = img;
             }
