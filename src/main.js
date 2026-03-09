@@ -350,13 +350,11 @@ class Game {
             if (collisionResult.destroyed) {
                 this.destroyedBricksCount++; // 破壊数をカウント
                 
-                // ロボットの破砕エフェクト
-                this.effectManager.createShatterEffect(
-                    collisionResult.brick.x,
-                    collisionResult.brick.y,
-                    collisionResult.brick.width,
-                    collisionResult.brick.height,
-                    Brick.processedSprite
+                // 通常の爆発エフェクトに戻す (フリーズ回避のため)
+                this.effectManager.createExplosion(
+                    collisionResult.brick.x + collisionResult.brick.width / 2, 
+                    collisionResult.brick.y + collisionResult.brick.height / 2,
+                    20
                 );
 
                 // EXP獲得
@@ -910,17 +908,10 @@ class Game {
             );
 
             if (hit.destroyed) {
-                this.effectManager.createShatterEffect(
-                    hit.brick.x,
-                    hit.brick.y,
-                    hit.brick.width,
-                    hit.brick.height,
-                    Brick.processedSprite
-                );
-                
                 this.effectManager.createExplosion(
                     hit.brick.x + hit.brick.width / 2, 
-                    hit.brick.y + hit.brick.height / 2
+                    hit.brick.y + hit.brick.height / 2,
+                    20
                 );
             }
         });
