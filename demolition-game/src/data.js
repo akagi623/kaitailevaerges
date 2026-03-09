@@ -2,17 +2,20 @@ export const BLOCK_TYPES = {
   wood: {
     hp: 40,
     color: '#d97706',
-    score: 100
+    score: 100,
+    sprite: 'src/spider_robot.png'
   },
   concrete: {
     hp: 120,
     color: '#64748b',
-    score: 300
+    score: 300,
+    sprite: 'src/spider_robot.png'
   },
   steel: {
     hp: 300,
     color: '#94a3b8',
-    score: 1000
+    score: 1000,
+    sprite: 'src/spider_robot.png'
   }
 };
 
@@ -49,7 +52,7 @@ export const CHARACTERS = [
 export const STAGES = [
   {
     id: 'stage1',
-    name: '現場：老朽化した木造家屋',
+    name: 'AI製造ハブ：外部搬入路',
     reward: 5000,
     timeLimit: 180,
     blocks: [
@@ -63,7 +66,7 @@ export const STAGES = [
   },
   {
     id: 'stage2',
-    name: '現場：コンクリートビル解体',
+    name: 'サーバー地区：メインフレーム入口',
     reward: 15000,
     timeLimit: 300,
     blocks: [

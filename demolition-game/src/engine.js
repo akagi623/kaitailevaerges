@@ -14,6 +14,8 @@ export class GameEngine {
         this.ball = { x: 0, y: 0, dx: 0, dy: 0, radius: 7 };
         this.paddle = { x: 0, y: 0, width: 100, height: 16 };
         this.blocks = [];
+        this.particles = [];
+        this.sprites = {};
 
         this.gameState = 'menu';
         this.stats = {
@@ -80,6 +82,14 @@ export class GameEngine {
 
         this.blocks = stage.blocks.map(b => {
             const type = BLOCK_TYPES[b.type];
+            
+            // Preload sprite if not loaded
+            if (type.sprite && !this.sprites[type.sprite]) {
+                const img = new Image();
+                img.src = type.sprite;
+                this.sprites[type.sprite] = img;
+            }
+
             return {
                 ...b,
                 x: b.x * (blockW + padding) + offsetLeft,
@@ -89,9 +99,12 @@ export class GameEngine {
                 hp: type.hp,
                 maxHp: type.hp,
                 color: type.color,
-                score: type.score
+                score: type.score,
+                sprite: type.sprite
             };
         });
+
+        this.particles = [];
 
         this.stats.time = stage.timeLimit;
         this.stats.combo = 0;
@@ -199,6 +212,9 @@ export class GameEngine {
                         this.requestUpdate();
 
                         if (b.hp <= 0) {
+                            // 発火・破片エフェクト
+                            this.createExplosion(b.x + b.width / 2, b.y + b.height / 2, b.color);
+                            
                             this.blocks.splice(i, 1);
                             this.stats.score += b.score;
                             this.requestUpdate();
@@ -228,33 +244,75 @@ export class GameEngine {
             this.ball.x = this.paddle.x + this.paddle.width / 2;
         }
 
+        this.updateParticles(dt);
+
         this.draw();
         requestAnimationFrame((t) => this.update(t));
+    }
+
+    createExplosion(x, y, color) {
+        for (let i = 0; i < 15; i++) {
+            this.particles.push({
+                x: x,
+                y: y,
+                dx: (Math.random() - 0.5) * 10,
+                dy: (Math.random() - 0.5) * 10,
+                life: 1.0,
+                color: Math.random() > 0.5 ? '#60a5fa' : color, // Blue sparks or block color
+                size: Math.random() * 3 + 1
+            });
+        }
+    }
+
+    updateParticles(dt) {
+        for (let i = this.particles.length - 1; i >= 0; i--) {
+            const p = this.particles[i];
+            p.x += p.dx;
+            p.y += p.dy;
+            p.life -= dt * 2;
+            if (p.life <= 0) this.particles.splice(i, 1);
+        }
     }
 
     draw() {
         this.ctx.clearRect(0, 0, this.width, this.height);
 
-        // Blocks
+        // Blocks (Robots)
         this.blocks.forEach(b => {
-            this.ctx.fillStyle = b.color;
-            this.ctx.globalAlpha = 0.4 + (b.hp / b.maxHp) * 0.6;
-            this.ctx.fillRect(b.x, b.y, b.width, b.height);
-            this.ctx.strokeStyle = 'rgba(255,255,255,0.4)';
-            this.ctx.strokeRect(b.x, b.y, b.width, b.height);
+            const sprite = this.sprites[b.sprite];
+            if (sprite && sprite.complete) {
+                // ロボットのスプライト描画
+                this.ctx.globalAlpha = 0.5 + (b.hp / b.maxHp) * 0.5;
+                this.ctx.drawImage(sprite, b.x, b.y, b.width, b.height);
+                
+                // ヒット時のフラッシュ効果（オプション）
+                if (b.hp < b.maxHp) {
+                    this.ctx.strokeStyle = 'rgba(96, 165, 250, 0.3)';
+                    this.ctx.strokeRect(b.x, b.y, b.width, b.height);
+                }
+            } else {
+                // フォールバック（画像読み込み中など）
+                this.ctx.fillStyle = b.color;
+                this.ctx.globalAlpha = 0.4 + (b.hp / b.maxHp) * 0.6;
+                this.ctx.fillRect(b.x, b.y, b.width, b.height);
+            }
 
             // HPの表示
             this.ctx.globalAlpha = 1.0;
             this.ctx.fillStyle = '#ffffff';
-            this.ctx.font = 'bold 14px sans-serif';
+            this.ctx.font = 'bold 12px Outfit';
             this.ctx.textAlign = 'center';
             this.ctx.textBaseline = 'middle';
-            this.ctx.shadowBlur = 4;
-            this.ctx.shadowColor = 'black';
             this.ctx.fillText(Math.ceil(b.hp), b.x + b.width / 2, b.y + b.height / 2);
-            this.ctx.shadowBlur = 0;
-            this.ctx.globalAlpha = 1.0;
         });
+
+        // Particles
+        this.particles.forEach(p => {
+            this.ctx.globalAlpha = p.life;
+            this.ctx.fillStyle = p.color;
+            this.ctx.fillRect(p.x, p.y, p.size, p.size);
+        });
+        this.ctx.globalAlpha = 1.0;
 
         const gradient = this.ctx.createLinearGradient(this.paddle.x, 0, this.paddle.x + this.paddle.width, 0);
         gradient.addColorStop(0, this.selectedChar?.color || '#f0ab3d');
