@@ -3,19 +3,19 @@ export const BLOCK_TYPES = {
     hp: 40,
     color: '#d97706',
     score: 100,
-    sprite: 'src/spider_robot.png'
+    sprite: 'spider_robot.png'
   },
   concrete: {
     hp: 120,
     color: '#64748b',
     score: 300,
-    sprite: 'src/spider_robot.png'
+    sprite: 'spider_robot.png'
   },
   steel: {
     hp: 300,
     color: '#94a3b8',
     score: 1000,
-    sprite: 'src/spider_robot.png'
+    sprite: 'spider_robot.png'
   }
 };
 
