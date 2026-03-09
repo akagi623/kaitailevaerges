@@ -91,14 +91,16 @@ export class EffectManager {
     }
 
     createShatterEffect(x, y, width, height, sprite) {
+        // 安全チェック: spriteが未定義または未ロードの場合は通常の爆発エフェクトを出す
         if (!sprite || !sprite.complete) {
-            this.createExplosion(x, y, 15);
+            this.createExplosion(x, y + height / 2, 12);
             return;
         }
 
         // スプライトをグリッド状に分割して破片にする
-        const rows = 4;
-        const cols = 4;
+        // 負荷軽減のため3x3に調整
+        const rows = 3;
+        const cols = 3;
         const pieceW = sprite.width / cols;
         const pieceH = sprite.height / rows;
         const targetPieceW = width / cols;
@@ -110,9 +112,10 @@ export class EffectManager {
                 const py = y + r * targetPieceH;
                 
                 const p = new Particle(
-                    px, py, 
+                    px + targetPieceW / 2, 
+                    py + targetPieceH / 2, 
                     '#fff', 
-                    Math.max(targetPieceW, targetPieceH) * 1.2, 
+                    Math.max(targetPieceW, targetPieceH) * 1.5, 
                     sprite, 
                     { x: c * pieceW, y: r * pieceH, w: pieceW, h: pieceH }
                 );

@@ -144,12 +144,16 @@ export class Brick {
             ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
             const bgW = Math.max(22, textWidth + 8);
             const bgH = 20;
+            const bx = this.x + this.width / 2 - bgW / 2;
+            const by = this.y + this.height / 2 - bgH / 2;
+            
             ctx.beginPath();
-            ctx.roundRect(
-                this.x + this.width / 2 - bgW / 2,
-                this.y + this.height / 2 - bgH / 2,
-                bgW, bgH, 10
-            );
+            if (ctx.roundRect) {
+                ctx.roundRect(bx, by, bgW, bgH, 10);
+            } else {
+                // roundRect非対応ブラウザ用フォールバック
+                ctx.rect(bx, by, bgW, bgH);
+            }
             ctx.fill();
 
             ctx.fillStyle = '#ffffff';
