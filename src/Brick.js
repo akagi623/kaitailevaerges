@@ -16,9 +16,35 @@ export class Brick {
         // ロボット用スプライトの初期化
         if (!Brick.sprite) {
             Brick.sprite = new Image();
+            Brick.isSpriteProcessed = false;
             // GitHub PagesなどのBase URLに対応
             const base = import.meta.env.BASE_URL || './';
             Brick.sprite.src = `${base}spider_robot.png`.replace(/\/+/g, '/');
+            
+            Brick.sprite.onload = () => {
+                // 背景除去処理（黒背景を透明に）
+                const canvas = document.createElement('canvas');
+                canvas.width = Brick.sprite.width;
+                canvas.height = Brick.sprite.height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(Brick.sprite, 0, 0);
+                
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const data = imageData.data;
+                for (let i = 0; i < data.length; i += 4) {
+                    // 真っ黒に近い色を透明にする
+                    if (data[i] < 30 && data[i+1] < 30 && data[i+2] < 30) {
+                        data[i+3] = 0;
+                    }
+                }
+                ctx.putImageData(imageData, 0, 0);
+                
+                Brick.processedSprite = new Image();
+                Brick.processedSprite.src = canvas.toDataURL();
+                Brick.processedSprite.onload = () => {
+                    Brick.isSpriteProcessed = true;
+                };
+            };
         }
     }
 
@@ -59,32 +85,42 @@ export class Brick {
         let offsetX = 0;
         let offsetY = 0;
         if (hpRatio < 0.4 && hpRatio > 0) {
-            offsetX = (Math.random() - 0.5) * 3;
-            offsetY = (Math.random() - 0.5) * 3;
+            offsetX = (Math.random() - 0.5) * 4; // 少し揺れを大きく
+            offsetY = (Math.random() - 0.5) * 4;
         }
 
-        if (Brick.sprite && Brick.sprite.complete) {
+        if (Brick.isSpriteProcessed && Brick.processedSprite.complete) {
             ctx.save();
             ctx.globalAlpha = 0.6 + hpRatio * 0.4;
             
-            // タイプ別の色付け（簡易フィルター）
+            // タイプ別の色付け（フィルター）
             if (this.isIssue) {
                 const hue = (Date.now() / 10) % 360;
-                ctx.filter = `hue-rotate(${hue}deg) saturate(2)`;
-            } else if (this.maxHp >= 3) { // Hard robot
-                ctx.filter = 'hue-rotate(180deg) brightness(1.2)';
+                ctx.filter = `hue-rotate(${hue}deg) saturate(2) drop-shadow(0 0 5px white)`;
+            } else if (this.maxHp >= 3) {
+                ctx.filter = 'hue-rotate(180deg) brightness(1.2) saturate(1.5)';
             }
             
-            ctx.drawImage(Brick.sprite, this.x + offsetX, this.y + offsetY, this.width, this.height);
+            // アスペクト比を維持して描画 (縦幅に合わせる)
+            const img = Brick.processedSprite;
+            const aspect = img.width / img.height;
+            const drawHeight = this.height * 1.5; // 少しはみ出すくらい大きく
+            const drawWidth = drawHeight * aspect;
+            
+            // 中央揃え
+            const drawX = this.x + (this.width - drawWidth) / 2 + offsetX;
+            const drawY = this.y + (this.height - drawHeight) / 2 + offsetY;
+            
+            ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
             ctx.restore();
 
-            // ヒット時のフラッシュ
+            // ヒット時のフラッシュ・グリッチ
             if (hpRatio < 1.0 && Math.random() > 0.9) {
                 ctx.fillStyle = 'rgba(96, 165, 250, 0.4)';
                 ctx.fillRect(this.x + offsetX, this.y + offsetY, this.width, this.height);
             }
         } else {
-            // フォールバック
+            // フォールバック（画像読み込み前）
             let color;
             if (this.isIssue) {
                 const hue = (Date.now() / 10) % 360;
