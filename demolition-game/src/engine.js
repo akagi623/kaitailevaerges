@@ -378,6 +378,7 @@ export class GameEngine {
             this.ctx.fillText(`x${multiplier} DMG`, this.width - 20, 90);
             this.ctx.shadowBlur = 0;
         }
+        this.ctx.restore();
     }
 
     requestUpdate() {
