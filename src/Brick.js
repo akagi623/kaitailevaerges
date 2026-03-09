@@ -17,33 +17,65 @@ export class Brick {
         if (!Brick.sprite) {
             Brick.sprite = new Image();
             Brick.isSpriteProcessed = false;
-            // GitHub PagesなどのBase URLに対応
             const base = import.meta.env.BASE_URL || './';
             Brick.sprite.src = `${base}spider_robot.png`.replace(/\/+/g, '/');
             
             Brick.sprite.onload = () => {
-                // 背景除去処理（黒背景を透明に）
                 const canvas = document.createElement('canvas');
                 canvas.width = Brick.sprite.width;
                 canvas.height = Brick.sprite.height;
                 const ctx = canvas.getContext('2d');
-                ctx.drawImage(Brick.sprite, 0, 0);
                 
-                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                const data = imageData.data;
+                // 1. 通常版 (背景除去のみ)
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(Brick.sprite, 0, 0);
+                let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                let data = imageData.data;
                 for (let i = 0; i < data.length; i += 4) {
-                    // 真っ黒に近い色を透明にする
-                    if (data[i] < 30 && data[i+1] < 30 && data[i+2] < 30) {
-                        data[i+3] = 0;
+                    if (data[i] < 30 && data[i+1] < 30 && data[i+2] < 30) data[i+3] = 0;
+                }
+                ctx.putImageData(imageData, 0, 0);
+                Brick.processedSprite = new Image();
+                Brick.processedSprite.src = canvas.toDataURL();
+
+                // 2. 赤色版 (ボス用: 赤を強調)
+                for (let i = 0; i < data.length; i += 4) {
+                    if (data[i+3] > 0) {
+                        data[i] = Math.min(255, data[i] * 1.5 + 50); // Red
+                        data[i+1] *= 0.5; // Green
+                        data[i+2] *= 0.5; // Blue
                     }
                 }
                 ctx.putImageData(imageData, 0, 0);
-                
-                Brick.processedSprite = new Image();
-                Brick.processedSprite.onload = () => {
-                    Brick.isSpriteProcessed = true;
+                Brick.bossProcessedSprite = new Image();
+                Brick.bossProcessedSprite.src = canvas.toDataURL();
+
+                // 3. 青色版 (重機用: 青を強調)
+                // まずデータを再取得（通常版から作るため）
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(Brick.sprite, 0, 0);
+                imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                data = imageData.data;
+                for (let i = 0; i < data.length; i += 4) {
+                    if (data[i] < 30 && data[i+1] < 30 && data[i+2] < 30) {
+                        data[i+3] = 0;
+                    } else {
+                        data[i] *= 0.4; // Red
+                        data[i+1] *= 0.8; // Green
+                        data[i+2] = Math.min(255, data[i+2] * 1.5 + 80); // Blue
+                    }
+                }
+                ctx.putImageData(imageData, 0, 0);
+                Brick.heavyProcessedSprite = new Image();
+                Brick.heavyProcessedSprite.src = canvas.toDataURL();
+
+                Brick.bossProcessedSprite.onload = () => {
+                    Brick.heavyProcessedSprite.onload = () => {
+                        Brick.processedSprite.onload = () => {
+                            Brick.isSpriteProcessed = true;
+                        };
+                    };
                 };
-                Brick.processedSprite.src = canvas.toDataURL();
             };
         }
     }
@@ -80,43 +112,35 @@ export class Brick {
         if (!this.active) return;
 
         const hpRatio = this.hp / this.maxHp;
-        
-        // ダメージ効果をリクエスト通り削除（揺れ、フラッシュなし）
-        const offsetX = 0;
-        const offsetY = 0;
 
-        if (Brick.isSpriteProcessed && Brick.processedSprite.complete) {
-            ctx.save();
-            ctx.globalAlpha = 0.6 + hpRatio * 0.4;
-            
-            // タイプ別の色付け（フィルター：重いドロップシャドウは削除）
-            if (this.isIssue) {
-                const hue = (Date.now() / 10) % 360;
-                ctx.filter = `hue-rotate(${hue}deg) saturate(2)`;
-            } else if (this.maxHp >= 3) {
-                ctx.filter = 'hue-rotate(180deg) brightness(1.2) saturate(1.5)';
+        if (Brick.isSpriteProcessed) {
+            // スプライトの選択
+            let img = Brick.processedSprite;
+            if (this.isIssue) img = Brick.bossProcessedSprite;
+            else if (this.maxHp >= 3) img = Brick.heavyProcessedSprite;
+
+            if (img && img.complete) {
+                ctx.save();
+                ctx.globalAlpha = 0.6 + hpRatio * 0.4;
+                
+                // アスペクト比を維持して描画
+                const spriteW = img.width || 1;
+                const spriteH = img.height || 1;
+                const aspect = spriteW / spriteH;
+                
+                const bw = this.width || BRICK_WIDTH;
+                const bh = this.height || BRICK_HEIGHT;
+                const drawHeight = bh * 2.8;
+                const drawWidth = drawHeight * aspect;
+                
+                const drawX = this.x + (bw - drawWidth) / 2;
+                const drawY = this.y + (bh - drawHeight) / 2;
+                
+                if (!isNaN(drawX) && !isNaN(drawY) && drawWidth > 0 && drawHeight > 0) {
+                    ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
+                }
+                ctx.restore();
             }
-            
-            // アスペクト比を維持して描画 (縦幅に対して大きく)
-            const img = Brick.processedSprite;
-            const spriteW = img.width || 1;
-            const spriteH = img.height || 1;
-            const aspect = spriteW / spriteH;
-            
-            const bw = this.width || BRICK_WIDTH;
-            const bh = this.height || BRICK_HEIGHT;
-            const drawHeight = bh * 2.8;
-            const drawWidth = drawHeight * aspect;
-            
-            // 中央揃え
-            const drawX = this.x + (bw - drawWidth) / 2;
-            const drawY = this.y + (bh - drawHeight) / 2;
-            
-            // 安全な値かチェック
-            if (!isNaN(drawX) && !isNaN(drawY) && drawWidth > 0 && drawHeight > 0) {
-                ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
-            }
-            ctx.restore();
         } else {
             // フォールバック（画像読み込み前）
             let color;
@@ -144,8 +168,8 @@ export class Brick {
         const blink = Math.sin(Date.now() / 150) > 0;
         if (blink) {
             ctx.save();
-            const text = this.hp.toString();
-            ctx.font = 'bold 15px "Segoe UI"';
+            const text = this.isIssue ? `BOSS HP: ${this.hp}` : this.hp.toString();
+            ctx.font = this.isIssue ? 'bold 12px "Segoe UI"' : 'bold 15px "Segoe UI"';
             const textMetrics = ctx.measureText(text);
             const textWidth = textMetrics.width;
             
@@ -165,7 +189,7 @@ export class Brick {
             }
             ctx.fill();
 
-            ctx.fillStyle = '#ffffff';
+            ctx.fillStyle = this.isIssue ? '#ff5252' : '#ffffff'; // ボスは数字も赤っぽく
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(text, this.x + this.width / 2, this.y + this.height / 2 + 1);
