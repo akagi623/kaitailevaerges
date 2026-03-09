@@ -14,19 +14,14 @@ export class Brick {
         this.respawnTimer = 0;
         
         // ロボット用スプライトの初期化 (クラス変数として一回だけ実行)
-        if (!Brick.isInitialized) {
+        if (Brick.isInitialized === undefined) {
             Brick.isInitialized = true;
             Brick.isSpriteProcessed = false;
             
-            const base = import.meta.env.BASE_URL || './';
+            const base = import.meta.env.BASE_URL || '/';
             const rawSprite = new Image();
-            rawSprite.src = `${base}public/spider_robot.png`.replace(/\/+/g, '/');
-            // ローカル/デプロイ両方の可能性を考慮
-            rawSprite.onerror = () => {
-                if (!rawSprite.src.includes('/public/')) {
-                    rawSprite.src = `${base}spider_robot.png`.replace(/\/+/g, '/');
-                }
-            };
+            // Viteの挙動に合わせて、publicフォルダを介さず直接ルートから解決する
+            rawSprite.src = (base + 'spider_robot.png').replace(/\/+/g, '/');
             
             rawSprite.onload = () => {
                 const canvas = document.createElement('canvas');
@@ -39,6 +34,7 @@ export class Brick {
                 let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
                 let data = imageData.data;
                 for (let i = 0; i < data.length; i += 4) {
+                    // 真っ黒に近い色を透明にする
                     if (data[i] < 35 && data[i+1] < 35 && data[i+2] < 35) data[i+3] = 0;
                 }
                 ctx.putImageData(imageData, 0, 0);
@@ -46,7 +42,6 @@ export class Brick {
                 Brick.processedSprite.src = canvas.toDataURL();
 
                 // --- 2. ボス赤色版 ---
-                // 通常版のデータをベースにする
                 for (let i = 0; i < data.length; i += 4) {
                     if (data[i+3] > 0) {
                         const gray = (data[i] + data[i+1] + data[i+2]) / 3;
@@ -80,6 +75,10 @@ export class Brick {
 
                 // 全てセットが完了したらフラグを立てる
                 Brick.isSpriteProcessed = true;
+            };
+
+            rawSprite.onerror = () => {
+                console.error("Failed to load spider_robot.png from:", rawSprite.src);
             };
         }
     }
