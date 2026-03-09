@@ -41,38 +41,6 @@ export class Brick {
                 Brick.processedSprite = new Image();
                 Brick.processedSprite.src = canvas.toDataURL();
 
-                // --- 2. ボス赤色版 ---
-                for (let i = 0; i < data.length; i += 4) {
-                    if (data[i+3] > 0) {
-                        const gray = (data[i] + data[i+1] + data[i+2]) / 3;
-                        data[i] = Math.min(255, gray * 1.5 + 80); // Red
-                        data[i+1] = gray * 0.3; // Green
-                        data[i+2] = gray * 0.3; // Blue
-                    }
-                }
-                ctx.putImageData(imageData, 0, 0);
-                Brick.bossProcessedSprite = new Image();
-                Brick.bossProcessedSprite.src = canvas.toDataURL();
-
-                // --- 3. 重機青色版 ---
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                ctx.drawImage(rawSprite, 0, 0);
-                imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                data = imageData.data;
-                for (let i = 0; i < data.length; i += 4) {
-                    if (data[i] < 35 && data[i+1] < 35 && data[i+2] < 35) {
-                        data[i+3] = 0;
-                    } else {
-                        const gray = (data[i] + data[i+1] + data[i+2]) / 3;
-                        data[i] = gray * 0.2; // Red
-                        data[i+1] = gray * 0.6; // Green
-                        data[i+2] = Math.min(255, gray * 1.2 + 100); // Blue
-                    }
-                }
-                ctx.putImageData(imageData, 0, 0);
-                Brick.heavyProcessedSprite = new Image();
-                Brick.heavyProcessedSprite.src = canvas.toDataURL();
-
                 // 全てセットが完了したらフラグを立てる
                 Brick.isSpriteProcessed = true;
             };
@@ -117,10 +85,8 @@ export class Brick {
         const hpRatio = this.hp / this.maxHp;
 
         if (Brick.isSpriteProcessed) {
-            // スプライトの選択
+            // スプライトの選択 (カラーバリエーションを廃止し、オリジナルに統一)
             let img = Brick.processedSprite;
-            if (this.isIssue) img = Brick.bossProcessedSprite;
-            else if (this.maxHp >= 3) img = Brick.heavyProcessedSprite;
 
             if (img && img.complete) {
                 ctx.save();
@@ -167,36 +133,35 @@ export class Brick {
             ctx.closePath();
         }
         
-        // HPの表示 (読みやすさ重視 + 点滅でロボットのデザインも見せる)
-        const blink = Math.sin(Date.now() / 150) > 0;
-        if (blink) {
-            ctx.save();
-            const text = this.isIssue ? `BOSS HP: ${this.hp}` : this.hp.toString();
-            ctx.font = this.isIssue ? 'bold 12px "Segoe UI"' : 'bold 15px "Segoe UI"';
-            const textMetrics = ctx.measureText(text);
-            const textWidth = textMetrics.width;
-            
-            // テキストの背景に半透明の黒丸/角丸を引いて読みやすくする
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-            const bgW = Math.max(22, textWidth + 8);
-            const bgH = 20;
-            const bx = this.x + this.width / 2 - bgW / 2;
-            const by = this.y + this.height / 2 - bgH / 2;
-            
-            ctx.beginPath();
-            if (ctx.roundRect) {
-                ctx.roundRect(bx, by, bgW, bgH, 10);
-            } else {
-                // roundRect非対応ブラウザ用フォールバック
-                ctx.rect(bx, by, bgW, bgH);
-            }
-            ctx.fill();
-
-            ctx.fillStyle = this.isIssue ? '#ff5252' : '#ffffff'; // ボスは数字も赤っぽく
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(text, this.x + this.width / 2, this.y + this.height / 2 + 1);
-            ctx.restore();
+        // HPの表示 (デザインを邪魔しないよう真ん中より下に配置し、点滅もやめる)
+        ctx.save();
+        const text = this.isIssue ? `BOSS HP: ${this.hp}` : this.hp.toString();
+        ctx.font = this.isIssue ? 'bold 12px "Segoe UI"' : 'bold 15px "Segoe UI"';
+        const textMetrics = ctx.measureText(text);
+        const textWidth = textMetrics.width;
+        
+        // テキストの背景に半透明の黒丸/角丸を引いて読みやすくする
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+        const bgW = Math.max(22, textWidth + 8);
+        const bgH = 20;
+        const bx = this.x + this.width / 2 - bgW / 2;
+        // Y位置を真ん中より下にずらす (姿が見えるように)
+        const by = this.y + this.height * 0.75 - bgH / 2;
+        
+        ctx.beginPath();
+        if (ctx.roundRect) {
+            ctx.roundRect(bx, by, bgW, bgH, 10);
+        } else {
+            // roundRect非対応ブラウザ用フォールバック
+            ctx.rect(bx, by, bgW, bgH);
         }
+        ctx.fill();
+
+        ctx.fillStyle = this.isIssue ? '#ff5252' : '#ffffff';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        // テキストも背景に合わせる
+        ctx.fillText(text, this.x + this.width / 2, by + bgH / 2 + 1);
+        ctx.restore();
     }
 }
