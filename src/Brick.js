@@ -40,10 +40,10 @@ export class Brick {
                 ctx.putImageData(imageData, 0, 0);
                 
                 Brick.processedSprite = new Image();
-                Brick.processedSprite.src = canvas.toDataURL();
                 Brick.processedSprite.onload = () => {
                     Brick.isSpriteProcessed = true;
                 };
+                Brick.processedSprite.src = canvas.toDataURL();
             };
         }
     }
@@ -89,25 +89,33 @@ export class Brick {
             ctx.save();
             ctx.globalAlpha = 0.6 + hpRatio * 0.4;
             
-            // タイプ別の色付け（フィルター）
+            // タイプ別の色付け（フィルター：重いドロップシャドウは削除）
             if (this.isIssue) {
                 const hue = (Date.now() / 10) % 360;
-                ctx.filter = `hue-rotate(${hue}deg) saturate(2) drop-shadow(0 0 5px white)`;
+                ctx.filter = `hue-rotate(${hue}deg) saturate(2)`;
             } else if (this.maxHp >= 3) {
                 ctx.filter = 'hue-rotate(180deg) brightness(1.2) saturate(1.5)';
             }
             
             // アスペクト比を維持して描画 (縦幅に対して大きく)
             const img = Brick.processedSprite;
-            const aspect = img.width / img.height;
-            const drawHeight = this.height * 2.8; // 大幅にスケールアップ
+            const spriteW = img.width || 1;
+            const spriteH = img.height || 1;
+            const aspect = spriteW / spriteH;
+            
+            const bw = this.width || BRICK_WIDTH;
+            const bh = this.height || BRICK_HEIGHT;
+            const drawHeight = bh * 2.8;
             const drawWidth = drawHeight * aspect;
             
             // 中央揃え
-            const drawX = this.x + (this.width - drawWidth) / 2;
-            const drawY = this.y + (this.height - drawHeight) / 2;
+            const drawX = this.x + (bw - drawWidth) / 2;
+            const drawY = this.y + (bh - drawHeight) / 2;
             
-            ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
+            // 安全な値かチェック
+            if (!isNaN(drawX) && !isNaN(drawY) && drawWidth > 0 && drawHeight > 0) {
+                ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
+            }
             ctx.restore();
         } else {
             // フォールバック（画像読み込み前）

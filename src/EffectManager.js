@@ -91,43 +91,47 @@ export class EffectManager {
     }
 
     createShatterEffect(x, y, width, height, sprite) {
-        // 安全チェック: spriteが未定義または未ロードの場合は通常の爆発エフェクトを出す
-        if (!sprite || !sprite.complete) {
-            this.createExplosion(x, y + height / 2, 12);
-            return;
-        }
-
-        // スプライトをグリッド状に分割して破片にする
-        // 負荷軽減のため3x3に調整
-        const rows = 3;
-        const cols = 3;
-        const pieceW = sprite.width / cols;
-        const pieceH = sprite.height / rows;
-        const targetPieceW = width / cols;
-        const targetPieceH = height / rows;
-
-        for (let r = 0; r < rows; r++) {
-            for (let c = 0; c < cols; c++) {
-                const px = x + c * targetPieceW;
-                const py = y + r * targetPieceH;
-                
-                const p = new Particle(
-                    px + targetPieceW / 2, 
-                    py + targetPieceH / 2, 
-                    '#fff', 
-                    Math.max(targetPieceW, targetPieceH) * 1.5, 
-                    sprite, 
-                    { x: c * pieceW, y: r * pieceH, w: pieceW, h: pieceH }
-                );
-                
-                // 中心から外側へ向かう力を与える
-                const centerX = x + width / 2;
-                const centerY = y + height / 2;
-                p.speedX = (px - centerX) * 0.2 + (Math.random() - 0.5) * 4;
-                p.speedY = (py - centerY) * 0.2 + (Math.random() - 0.5) * 4 - 2;
-                
-                this.particles.push(p);
+        try {
+            // 安全チェック: spriteが未定義または未ロード、あるいはサイズ0の場合は通常の爆発エフェクトを出す
+            if (!sprite || !sprite.complete || !sprite.width || !sprite.height) {
+                this.createExplosion(x + (width||0)/2, y + (height||0)/2, 12);
+                return;
             }
+
+            // スプライトをグリッド状に分割して破片にする
+            const rows = 3;
+            const cols = 3;
+            const pieceW = sprite.width / cols;
+            const pieceH = sprite.height / rows;
+            const targetPieceW = (width || 45) / cols;
+            const targetPieceH = (height || 25) / rows;
+
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    const px = x + c * targetPieceW;
+                    const py = y + r * targetPieceH;
+                    
+                    const p = new Particle(
+                        px + targetPieceW / 2, 
+                        py + targetPieceH / 2, 
+                        '#fff', 
+                        Math.max(targetPieceW, targetPieceH) * 1.5, 
+                        sprite, 
+                        { x: c * pieceW, y: r * pieceH, w: pieceW, h: pieceH }
+                    );
+                    
+                    // 中心から外側へ向かう力を与える
+                    const centerX = x + (width || 0) / 2;
+                    const centerY = y + (height || 0) / 2;
+                    p.speedX = (px - centerX) * 0.15 + (Math.random() - 0.5) * 4;
+                    p.speedY = (py - centerY) * 0.15 + (Math.random() - 0.5) * 4 - 2;
+                    
+                    this.particles.push(p);
+                }
+            }
+        } catch (e) {
+            console.error("Shatter effect error:", e);
+            this.createExplosion(x, y, 10);
         }
     }
 

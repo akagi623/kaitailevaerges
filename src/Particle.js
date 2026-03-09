@@ -21,29 +21,35 @@ export class Particle {
     }
 
     update() {
-        this.x += this.speedX;
-        this.y += this.speedY;
+        if (isNaN(this.x) || isNaN(this.y)) {
+            this.life = 0;
+            return;
+        }
+        this.x += (this.speedX || 0);
+        this.y += (this.speedY || 0);
         this.speedY += 0.1; // 重力
         this.life -= this.decay;
         if (this.srcRect) {
-            this.rotation += this.rotationSpeed;
+            this.rotation += (this.rotationSpeed || 0);
         }
         if (this.life < 0) this.life = 0;
     }
 
     draw(ctx) {
+        if (this.life <= 0 || isNaN(this.x) || isNaN(this.y)) return;
+
         ctx.save();
         ctx.globalAlpha = this.life;
         
-        if (this.sprite && this.srcRect) {
+        if (this.sprite && this.srcRect && !isNaN(this.size) && this.size > 0) {
             ctx.translate(this.x, this.y);
-            ctx.rotate(this.rotation);
+            ctx.rotate(this.rotation || 0);
             ctx.drawImage(
                 this.sprite,
                 this.srcRect.x, this.srcRect.y, this.srcRect.w, this.srcRect.h,
                 -this.size/2, -this.size/2, this.size, this.size
             );
-        } else {
+        } else if (!isNaN(this.size) && this.size > 0) {
             ctx.fillStyle = this.color;
             ctx.fillRect(this.x - this.size/2, this.y - this.size/2, this.size, this.size);
         }
