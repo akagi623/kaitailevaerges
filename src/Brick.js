@@ -143,6 +143,7 @@ export class Brick {
         // HPの表示 (読みやすさ重視 + 点滅でロボットのデザインも見せる)
         const blink = Math.sin(Date.now() / 150) > 0;
         if (blink) {
+            ctx.save();
             const text = this.hp.toString();
             ctx.font = 'bold 15px "Segoe UI"';
             const textMetrics = ctx.measureText(text);
@@ -168,6 +169,7 @@ export class Brick {
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(text, this.x + this.width / 2, this.y + this.height / 2 + 1);
+            ctx.restore();
         }
     }
 }

@@ -542,6 +542,7 @@ class Game {
         this.ctx.fillStyle = '#fff';
         this.ctx.font = 'bold 18px "Segoe UI"';
         this.ctx.textAlign = 'left';
+        this.ctx.textBaseline = 'alphabetic'; // 明示的にベースラインをリセット
         this.ctx.fillText(`Score: ${this.formatScore(this.score)}`, 15, 28);
         
         this.ctx.fillStyle = '#fff';
@@ -813,6 +814,7 @@ class Game {
         const fontSize = Math.min(52, Math.floor(CANVAS_WIDTH / 8));
         this.ctx.font = `bold ${fontSize}px "Segoe UI"`;
         this.ctx.textAlign = 'center';
+        this.ctx.textBaseline = 'middle'; // 中央に配置
         this.ctx.fillText(text, CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2);
         
         // ボタンの描画
