@@ -54,12 +54,12 @@ export const STAGE_ID = {
 
 export const STAGE_CONFIG = {
     [STAGE_ID.IKEBUKURO]: {
-        name: '池袋',
+        name: 'AI製造ハブ: 外部搬入路',
         coreHp: 1,
         difficulty: 1
     },
     [STAGE_ID.SHIBUYA]: {
-        name: '渋谷',
+        name: 'サーバー地区: メインフレーム入口',
         coreHp: 5,
         difficulty: 2
     }
