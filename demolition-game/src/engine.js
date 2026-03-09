@@ -16,6 +16,7 @@ export class GameEngine {
         this.blocks = [];
         this.particles = [];
         this.sprites = {};
+        this.screenShake = 0;
 
         this.gameState = 'menu';
         this.stats = {
@@ -250,20 +251,22 @@ export class GameEngine {
         }
 
         this.updateParticles(dt);
+        if (this.screenShake > 0) this.screenShake -= dt * 20;
 
         this.draw();
         requestAnimationFrame((t) => this.update(t));
     }
 
     createExplosion(x, y, color) {
-        for (let i = 0; i < 15; i++) {
+        this.screenShake = 5; // 小型ロボット破壊時の揺れ
+        for (let i = 0; i < 20; i++) {
             this.particles.push({
                 x: x,
                 y: y,
-                dx: (Math.random() - 0.5) * 10,
-                dy: (Math.random() - 0.5) * 10,
+                dx: (Math.random() - 0.5) * 12,
+                dy: (Math.random() - 0.5) * 12,
                 life: 1.0,
-                color: Math.random() > 0.5 ? '#60a5fa' : color, // Blue sparks or block color
+                color: Math.random() > 0.3 ? '#60a5fa' : (Math.random() > 0.5 ? '#fbbf24' : color), // Spark colors
                 size: Math.random() * 3 + 1
             });
         }
@@ -280,26 +283,48 @@ export class GameEngine {
     }
 
     draw() {
-        this.ctx.clearRect(0, 0, this.width, this.height);
+        this.ctx.save();
+        if (this.screenShake > 0) {
+            this.ctx.translate((Math.random() - 0.5) * this.screenShake, (Math.random() - 0.5) * this.screenShake);
+        }
+        this.ctx.clearRect(-10, -10, this.width + 20, this.height + 20);
 
         // Blocks (Robots)
         this.blocks.forEach(b => {
             const sprite = this.sprites[b.sprite];
+            const hpRatio = b.hp / b.maxHp;
+            
+            // ダメージ時の揺れ（ジッター）
+            let offsetX = 0;
+            let offsetY = 0;
+            if (hpRatio < 0.4) {
+                offsetX = (Math.random() - 0.5) * 3;
+                offsetY = (Math.random() - 0.5) * 3;
+            }
+
             if (sprite && sprite.complete) {
-                // ロボットのスプライト描画
-                this.ctx.globalAlpha = 0.5 + (b.hp / b.maxHp) * 0.5;
-                this.ctx.drawImage(sprite, b.x, b.y, b.width, b.height);
+                this.ctx.save();
+                this.ctx.globalAlpha = 0.6 + hpRatio * 0.4;
                 
-                // ヒット時のフラッシュ効果（オプション）
-                if (b.hp < b.maxHp) {
-                    this.ctx.strokeStyle = 'rgba(96, 165, 250, 0.3)';
-                    this.ctx.strokeRect(b.x, b.y, b.width, b.height);
+                // タイプ別の色付け（簡易フィルター）
+                if (b.color === '#d97706') { // Wood robot -> Yellowish
+                    this.ctx.filter = 'sepia(1) saturate(2) hue-rotate(-20deg)';
+                } else if (b.color === '#94a3b8') { // Steel robot -> Bright Cyan
+                    this.ctx.filter = 'hue-rotate(180deg) brightness(1.2)';
+                }
+                
+                this.ctx.drawImage(sprite, b.x + offsetX, b.y + offsetY, b.width, b.height);
+                this.ctx.restore();
+                
+                // ヒット時のフラッシュ・グリッチ
+                if (hpRatio < 1.0 && Math.random() > 0.9) {
+                    this.ctx.fillStyle = 'rgba(96, 165, 250, 0.4)';
+                    this.ctx.fillRect(b.x + offsetX, b.y + offsetY, b.width, b.height);
                 }
             } else {
-                // フォールバック（画像読み込み中など）
                 this.ctx.fillStyle = b.color;
-                this.ctx.globalAlpha = 0.4 + (b.hp / b.maxHp) * 0.6;
-                this.ctx.fillRect(b.x, b.y, b.width, b.height);
+                this.ctx.globalAlpha = 0.4 + hpRatio * 0.6;
+                this.ctx.fillRect(b.x + offsetX, b.y + offsetY, b.width, b.height);
             }
 
             // HPの表示
@@ -308,7 +333,7 @@ export class GameEngine {
             this.ctx.font = 'bold 12px Outfit';
             this.ctx.textAlign = 'center';
             this.ctx.textBaseline = 'middle';
-            this.ctx.fillText(Math.ceil(b.hp), b.x + b.width / 2, b.y + b.height / 2);
+            this.ctx.fillText(Math.ceil(b.hp), b.x + b.width / 2 + offsetX, b.y + b.height / 2 + offsetY);
         });
 
         // Particles
