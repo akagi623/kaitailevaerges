@@ -92,7 +92,9 @@ export class GameEngine {
                     this.draw(); // Force redraw once loaded
                 };
                 img.onerror = () => console.error(`Failed to load sprite: ${type.sprite}`);
-                img.src = type.sprite;
+                // GitHub PagesなどのBase URLに対応
+                const base = import.meta.env.BASE_URL || './';
+                img.src = `${base}${type.sprite}`.replace(/\/+/g, '/'); 
                 this.sprites[type.sprite] = img;
             }
 
