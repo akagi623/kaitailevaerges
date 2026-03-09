@@ -20,11 +20,11 @@ export const PADDLE_SPEED = 8;
 
 export const BRICK_ROWS = 6;
 export const BRICK_COLS = 6;
-export const BRICK_WIDTH = 45;
+export const BRICK_WIDTH = 60;
 export const BRICK_HEIGHT = 25;
-export const BRICK_PADDING = 18;
+export const BRICK_PADDING = 8;
 export const BRICK_OFFSET_TOP = 130;  // EXPバー・UIの下にスペース
-export const BRICK_OFFSET_LEFT = 45;
+export const BRICK_OFFSET_LEFT = 25;
 
 export const SPECIAL_GAUGE_MAX = 100;
 export const GAUGE_CHARGE_PER_HIT = 2; // パドルorブロックヒットでの上昇量
