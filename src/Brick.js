@@ -81,13 +81,9 @@ export class Brick {
 
         const hpRatio = this.hp / this.maxHp;
         
-        // ダメージ時の揺れ（ジッター）
-        let offsetX = 0;
-        let offsetY = 0;
-        if (hpRatio < 0.4 && hpRatio > 0) {
-            offsetX = (Math.random() - 0.5) * 4; // 少し揺れを大きく
-            offsetY = (Math.random() - 0.5) * 4;
-        }
+        // ダメージ効果をリクエスト通り削除（揺れ、フラッシュなし）
+        const offsetX = 0;
+        const offsetY = 0;
 
         if (Brick.isSpriteProcessed && Brick.processedSprite.complete) {
             ctx.save();
@@ -101,24 +97,18 @@ export class Brick {
                 ctx.filter = 'hue-rotate(180deg) brightness(1.2) saturate(1.5)';
             }
             
-            // アスペクト比を維持して描画 (縦幅に合わせる)
+            // アスペクト比を維持して描画 (縦幅に対して大きく)
             const img = Brick.processedSprite;
             const aspect = img.width / img.height;
-            const drawHeight = this.height * 1.5; // 少しはみ出すくらい大きく
+            const drawHeight = this.height * 2.8; // 大幅にスケールアップ
             const drawWidth = drawHeight * aspect;
             
             // 中央揃え
-            const drawX = this.x + (this.width - drawWidth) / 2 + offsetX;
-            const drawY = this.y + (this.height - drawHeight) / 2 + offsetY;
+            const drawX = this.x + (this.width - drawWidth) / 2;
+            const drawY = this.y + (this.height - drawHeight) / 2;
             
             ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
             ctx.restore();
-
-            // ヒット時のフラッシュ・グリッチ
-            if (hpRatio < 1.0 && Math.random() > 0.9) {
-                ctx.fillStyle = 'rgba(96, 165, 250, 0.4)';
-                ctx.fillRect(this.x + offsetX, this.y + offsetY, this.width, this.height);
-            }
         } else {
             // フォールバック（画像読み込み前）
             let color;
@@ -134,19 +124,22 @@ export class Brick {
             }
 
             ctx.beginPath();
-            ctx.rect(this.x + offsetX, this.y + offsetY, this.width, this.height);
+            ctx.rect(this.x, this.y, this.width, this.height);
             ctx.fillStyle = color;
             ctx.fill();
             ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
-            ctx.strokeRect(this.x + offsetX, this.y + offsetY, this.width, this.height);
+            ctx.strokeRect(this.x, this.y, this.width, this.height);
             ctx.closePath();
         }
         
-        // HPの表示
+        // HPの表示 (大きく)
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 12px "Segoe UI"';
+        ctx.shadowColor = 'rgba(0,0,0,0.8)';
+        ctx.shadowBlur = 4;
+        ctx.font = 'bold 18px "Segoe UI"';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(this.hp, this.x + this.width / 2 + offsetX, this.y + this.height / 2 + offsetY);
+        ctx.fillText(this.hp, this.x + this.width / 2, this.y + this.height / 2);
+        ctx.shadowBlur = 0;
     }
 }
