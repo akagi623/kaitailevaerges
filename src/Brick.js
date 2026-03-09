@@ -132,14 +132,27 @@ export class Brick {
             ctx.closePath();
         }
         
-        // HPの表示 (大きく)
+        // HPの表示 (読みやすさ重視)
+        const text = this.hp.toString();
+        ctx.font = 'bold 15px "Segoe UI"';
+        const textMetrics = ctx.measureText(text);
+        const textWidth = textMetrics.width;
+        
+        // テキストの背景に半透明の黒丸/角丸を引いて読みやすくする
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+        const bgW = Math.max(22, textWidth + 8);
+        const bgH = 20;
+        ctx.beginPath();
+        ctx.roundRect(
+            this.x + this.width / 2 - bgW / 2,
+            this.y + this.height / 2 - bgH / 2,
+            bgW, bgH, 10
+        );
+        ctx.fill();
+
         ctx.fillStyle = '#ffffff';
-        ctx.shadowColor = 'rgba(0,0,0,0.8)';
-        ctx.shadowBlur = 4;
-        ctx.font = 'bold 18px "Segoe UI"';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(this.hp, this.x + this.width / 2, this.y + this.height / 2);
-        ctx.shadowBlur = 0;
+        ctx.fillText(text, this.x + this.width / 2, this.y + this.height / 2 + 1);
     }
 }
