@@ -90,6 +90,44 @@ export class EffectManager {
         }
     }
 
+    createShatterEffect(x, y, width, height, sprite) {
+        if (!sprite || !sprite.complete) {
+            this.createExplosion(x, y, 15);
+            return;
+        }
+
+        // スプライトをグリッド状に分割して破片にする
+        const rows = 4;
+        const cols = 4;
+        const pieceW = sprite.width / cols;
+        const pieceH = sprite.height / rows;
+        const targetPieceW = width / cols;
+        const targetPieceH = height / rows;
+
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+                const px = x + c * targetPieceW;
+                const py = y + r * targetPieceH;
+                
+                const p = new Particle(
+                    px, py, 
+                    '#fff', 
+                    Math.max(targetPieceW, targetPieceH) * 1.2, 
+                    sprite, 
+                    { x: c * pieceW, y: r * pieceH, w: pieceW, h: pieceH }
+                );
+                
+                // 中心から外側へ向かう力を与える
+                const centerX = x + width / 2;
+                const centerY = y + height / 2;
+                p.speedX = (px - centerX) * 0.2 + (Math.random() - 0.5) * 4;
+                p.speedY = (py - centerY) * 0.2 + (Math.random() - 0.5) * 4 - 2;
+                
+                this.particles.push(p);
+            }
+        }
+    }
+
     createFireParticle(x, y) {
         // 火の粉。黄色、オレンジ、赤のいずれか。
         const r = Math.random();

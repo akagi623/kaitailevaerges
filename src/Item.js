@@ -8,7 +8,8 @@ export const ITEM_TYPES = {
 const ITEM_STATES = {
     NORMAL: 'NORMAL',
     BOUNCING: 'BOUNCING',
-    SUCKED: 'SUCKED'
+    SUCKED: 'SUCKED',
+    AUTO_COLLECT: 'AUTO_COLLECT' // 浮遊してから高速回収
 };
 
 export class Item {
@@ -18,10 +19,11 @@ export class Item {
         this.width = type === ITEM_TYPES.MONEY ? 15 : 20;
         this.height = type === ITEM_TYPES.MONEY ? 15 : 20;
         this.type = type;
-        this.speedX = 0;
-        this.speedY = 2;
+        this.speedX = (Math.random() - 0.5) * 2;
+        this.speedY = type === ITEM_TYPES.MONEY ? -2 : 2; // お金は最初少し浮く
         this.active = true;
-        this.state = ITEM_STATES.NORMAL;
+        this.state = type === ITEM_TYPES.MONEY ? ITEM_STATES.AUTO_COLLECT : ITEM_STATES.NORMAL;
+        this.collectTimer = 0;
         this.bounceTimer = 0;
     }
 
@@ -36,23 +38,45 @@ export class Item {
             if (this.bounceTimer > 10) {
                 this.state = ITEM_STATES.SUCKED;
             }
+        } else if (this.state === ITEM_STATES.AUTO_COLLECT) {
+            // フワッと浮いてから高速でパドルへ
+            this.collectTimer++;
+            if (this.collectTimer < 20) {
+                this.y += this.speedY;
+                this.x += this.speedX;
+                this.speedY *= 0.9; // 減速して浮遊感を出す
+                this.speedX *= 0.9;
+            } else {
+                this.state = ITEM_STATES.SUCKED;
+                this.speedX = 0;
+                this.speedY = 0;
+            }
         } else if (this.state === ITEM_STATES.SUCKED) {
-            // パドル中央へ向かって加速
+            // パドル中央へ向かって高速加速
             const targetX = paddle.x + paddle.width / 2;
             const targetY = paddle.y + paddle.height / 2;
             const dx = targetX - (this.x + this.width / 2);
             const dy = targetY - (this.y + this.height / 2);
             const dist = Math.sqrt(dx * dx + dy * dy);
             
-            if (dist > 5) { // 加速
-                this.speedX += (dx / dist) * 1.5;
-                this.speedY += (dy / dist) * 1.5;
+            if (dist > 5) { // さらに高速化
+                const accel = this.type === ITEM_TYPES.MONEY ? 3.0 : 1.5;
+                this.speedX += (dx / dist) * accel;
+                this.speedY += (dy / dist) * accel;
+                
+                // 最高速度制限（振れすぎ防止）
+                const maxSpeed = 15;
+                const currentSpeed = Math.sqrt(this.speedX * this.speedX + this.speedY * this.speedY);
+                if (currentSpeed > maxSpeed) {
+                    this.speedX = (this.speedX / currentSpeed) * maxSpeed;
+                    this.speedY = (this.speedY / currentSpeed) * maxSpeed;
+                }
             }
             this.x += this.speedX;
             this.y += this.speedY;
         }
 
-        if (this.y > CANVAS_HEIGHT) {
+        if (this.y > CANVAS_HEIGHT + 100) { // 回収中にはみ出しても少し許容
             this.active = false;
         }
     }
