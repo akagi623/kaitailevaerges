@@ -13,69 +13,73 @@ export class Brick {
         this.isEdge = isEdge;
         this.respawnTimer = 0;
         
-        // ロボット用スプライトの初期化
-        if (!Brick.sprite) {
-            Brick.sprite = new Image();
+        // ロボット用スプライトの初期化 (クラス変数として一回だけ実行)
+        if (!Brick.isInitialized) {
+            Brick.isInitialized = true;
             Brick.isSpriteProcessed = false;
-            const base = import.meta.env.BASE_URL || './';
-            Brick.sprite.src = `${base}spider_robot.png`.replace(/\/+/g, '/');
             
-            Brick.sprite.onload = () => {
+            const base = import.meta.env.BASE_URL || './';
+            const rawSprite = new Image();
+            rawSprite.src = `${base}public/spider_robot.png`.replace(/\/+/g, '/');
+            // ローカル/デプロイ両方の可能性を考慮
+            rawSprite.onerror = () => {
+                if (!rawSprite.src.includes('/public/')) {
+                    rawSprite.src = `${base}spider_robot.png`.replace(/\/+/g, '/');
+                }
+            };
+            
+            rawSprite.onload = () => {
                 const canvas = document.createElement('canvas');
-                canvas.width = Brick.sprite.width;
-                canvas.height = Brick.sprite.height;
+                canvas.width = rawSprite.width;
+                canvas.height = rawSprite.height;
                 const ctx = canvas.getContext('2d');
                 
-                // 1. 通常版 (背景除去のみ)
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                ctx.drawImage(Brick.sprite, 0, 0);
+                // --- 1. 通常版 (背景除去) ---
+                ctx.drawImage(rawSprite, 0, 0);
                 let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
                 let data = imageData.data;
                 for (let i = 0; i < data.length; i += 4) {
-                    if (data[i] < 30 && data[i+1] < 30 && data[i+2] < 30) data[i+3] = 0;
+                    if (data[i] < 35 && data[i+1] < 35 && data[i+2] < 35) data[i+3] = 0;
                 }
                 ctx.putImageData(imageData, 0, 0);
                 Brick.processedSprite = new Image();
                 Brick.processedSprite.src = canvas.toDataURL();
 
-                // 2. 赤色版 (ボス用: 赤を強調)
+                // --- 2. ボス赤色版 ---
+                // 通常版のデータをベースにする
                 for (let i = 0; i < data.length; i += 4) {
                     if (data[i+3] > 0) {
-                        data[i] = Math.min(255, data[i] * 1.5 + 50); // Red
-                        data[i+1] *= 0.5; // Green
-                        data[i+2] *= 0.5; // Blue
+                        const gray = (data[i] + data[i+1] + data[i+2]) / 3;
+                        data[i] = Math.min(255, gray * 1.5 + 80); // Red
+                        data[i+1] = gray * 0.3; // Green
+                        data[i+2] = gray * 0.3; // Blue
                     }
                 }
                 ctx.putImageData(imageData, 0, 0);
                 Brick.bossProcessedSprite = new Image();
                 Brick.bossProcessedSprite.src = canvas.toDataURL();
 
-                // 3. 青色版 (重機用: 青を強調)
-                // まずデータを再取得（通常版から作るため）
+                // --- 3. 重機青色版 ---
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
-                ctx.drawImage(Brick.sprite, 0, 0);
+                ctx.drawImage(rawSprite, 0, 0);
                 imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
                 data = imageData.data;
                 for (let i = 0; i < data.length; i += 4) {
-                    if (data[i] < 30 && data[i+1] < 30 && data[i+2] < 30) {
+                    if (data[i] < 35 && data[i+1] < 35 && data[i+2] < 35) {
                         data[i+3] = 0;
                     } else {
-                        data[i] *= 0.4; // Red
-                        data[i+1] *= 0.8; // Green
-                        data[i+2] = Math.min(255, data[i+2] * 1.5 + 80); // Blue
+                        const gray = (data[i] + data[i+1] + data[i+2]) / 3;
+                        data[i] = gray * 0.2; // Red
+                        data[i+1] = gray * 0.6; // Green
+                        data[i+2] = Math.min(255, gray * 1.2 + 100); // Blue
                     }
                 }
                 ctx.putImageData(imageData, 0, 0);
                 Brick.heavyProcessedSprite = new Image();
                 Brick.heavyProcessedSprite.src = canvas.toDataURL();
 
-                Brick.bossProcessedSprite.onload = () => {
-                    Brick.heavyProcessedSprite.onload = () => {
-                        Brick.processedSprite.onload = () => {
-                            Brick.isSpriteProcessed = true;
-                        };
-                    };
-                };
+                // 全てセットが完了したらフラグを立てる
+                Brick.isSpriteProcessed = true;
             };
         }
     }
