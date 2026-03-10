@@ -22,12 +22,23 @@ export class LevelManager {
 
         for (let r = 0; r < BRICK_ROWS; r++) {
             for (let c = 0; c < BRICK_COLS; c++) {
-                const brickX = (c * (BRICK_WIDTH + BRICK_PADDING)) + BRICK_OFFSET_LEFT;
+                let brickX = (c * (BRICK_WIDTH + BRICK_PADDING)) + BRICK_OFFSET_LEFT;
                 const brickY = (r * (BRICK_HEIGHT + BRICK_PADDING)) + BRICK_OFFSET_TOP;
                 
-                // 初回はすべてコアブロックではない
+                let width = BRICK_WIDTH;
+                const isEdgeLeft = (c === 0);
+                const isEdgeRight = (c === BRICK_COLS - 1);
+                
+                // 左右の端のブロックは、壁との隙間を空けて「裏回り」しやすくする
+                if (isEdgeLeft) {
+                    brickX += 15; // 右に寄せる
+                    width -= 15;  // 幅を削る（左側に隙間を作る）
+                } else if (isEdgeRight) {
+                    width -= 15;  // 幅を削る（右側に隙間を作る）
+                }
+
                 const isIssue = false;
-                const isEdge = (c === 0 || c === BRICK_COLS - 1);
+                const isEdge = isEdgeLeft || isEdgeRight;
                 
                 let isCenterTarget = false;
                 if (isShibuya) {
@@ -41,6 +52,7 @@ export class LevelManager {
                 const hp = isShibuya ? Math.floor(Math.random() * 41) + 30 : Math.floor(Math.random() * 31) + 20;
 
                 const brick = new Brick(brickX, brickY, hp, isIssue, isEdge);
+                brick.width = width; // 調整した幅を適用
                 brick.isCenterTarget = isCenterTarget;
                 this.bricks.push(brick);
             }

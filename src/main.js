@@ -18,11 +18,11 @@ class Game {
         
         // 画像の読み込み
         this.topImage = new Image();
-        this.topImage.src = 'TOP.png';
+        this.topImage.src = 'TOP.webp';
         this.yasuImage = new Image();
-        this.yasuImage.src = 'chara_1_icon.png';
+        this.yasuImage.src = 'chara_1_icon.webp';
         this.oyakataImage = new Image();
-        this.oyakataImage.src = 'chara_2_icon.png';
+        this.oyakataImage.src = 'chara_2_icon.webp';
 
         // BGMの設定
         this.bgm = new Audio('BURNING ADRENALINE.mp3');
