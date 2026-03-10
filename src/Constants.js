@@ -49,7 +49,8 @@ export const GAME_STATE = {
 
 export const STAGE_ID = {
     IKEBUKURO: 'ikebukuro',
-    SHIBUYA: 'shibuya'
+    SHIBUYA: 'shibuya',
+    BOSS: 'boss'
 };
 
 export const STAGE_CONFIG = {
@@ -62,6 +63,12 @@ export const STAGE_CONFIG = {
         name: 'サーバー地区: メインフレーム入口',
         coreHp: 5,
         difficulty: 2
+    },
+    [STAGE_ID.BOSS]: {
+        name: '中枢コア: 最終防衛ライン',
+        coreHp: 1000,
+        difficulty: 3,
+        isBossStage: true
     }
 };
 

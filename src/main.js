@@ -136,6 +136,11 @@ class Game {
                 if (canvasX > btnX && canvasX < btnX + btnW && canvasY > s2Y && canvasY < s2Y + btnH) {
                     this.startGame(STAGE_ID.SHIBUYA);
                 }
+                const s3Y = 350;
+                // クリック判定を少し広くする (450まで許容)
+                if (canvasX > btnX - 50 && canvasX < btnX + btnW + 50 && canvasY > s3Y && canvasY < s3Y + btnH) {
+                    this.startGame(STAGE_ID.BOSS);
+                }
             } else if (this.gameState === GAME_STATE.PLAYING) {
                 if (this.paused) {
                     this.handlePauseTouch(canvasX, canvasY);
@@ -260,9 +265,11 @@ class Game {
             this.hasShownIssue = false;
         }
         this.levelManager.init(stageId);
+        const config = STAGE_CONFIG[stageId];
         this.gameState = GAME_STATE.PLAYING;
         this.gameStarted = true;
-        this.entranceEndTime = Date.now() + 3500; // 3.5秒のカウントダウン
+        this.isBossIntro = !!(config && config.isBossStage);
+        this.entranceEndTime = Date.now() + (this.isBossIntro ? 5000 : 3500); 
         this.bgm.play().catch(e => console.error("Audio playback failed:", e));
     }
 
@@ -601,7 +608,11 @@ class Game {
 
         // カウントダウン演出
         if (this.gameStarted && Date.now() < this.entranceEndTime) {
-            this.drawCountdown();
+            if (this.isBossIntro) {
+                this.drawBossWarning();
+            } else {
+                this.drawCountdown();
+            }
             return;
         }
 
@@ -693,6 +704,140 @@ class Game {
             
             ctx.restore();
         }
+    }
+
+    drawBossWarning() {
+        const ctx = this.ctx;
+        const now = Date.now();
+        const remaining = Math.max(0, this.entranceEndTime - now);
+        const totalDuration = 5000;
+        const progress = 1 - (remaining / totalDuration);
+        
+        ctx.save();
+        
+        // 背景: 黒
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+        // 1. ハニカム背景
+        this.drawHoneycomb(progress);
+
+        // 2. デジタルノイズ/グリッチ背景
+        if (Math.random() > 0.8) {
+            this.drawDigitalGlitch();
+        }
+
+        // 3. 上下の警告帯
+        this.drawWarningBands(progress);
+
+        // 4. 中央のWARNING文字
+        this.drawWarningMainText(progress);
+
+        ctx.restore();
+    }
+
+    drawHoneycomb(progress) {
+        const ctx = this.ctx;
+        const size = 30;
+        const hexWidth = size * Math.sqrt(3);
+        const hexHeight = size * 2;
+        const rows = Math.ceil(CANVAS_HEIGHT / (hexHeight * 0.75)) + 1;
+        const cols = Math.ceil(CANVAS_WIDTH / hexWidth) + 1;
+
+        ctx.strokeStyle = 'rgba(255, 0, 0, 0.15)';
+        ctx.lineWidth = 1;
+
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+                let x = c * hexWidth;
+                let y = r * hexHeight * 0.75;
+                if (r % 2 === 1) x += hexWidth / 2;
+
+                // 少し動かす
+                y += (progress * 50) % (hexHeight * 0.75);
+
+                ctx.beginPath();
+                for (let i = 0; i < 6; i++) {
+                    const angle = (Math.PI / 3) * i + (Math.PI / 6);
+                    const px = x + size * Math.cos(angle);
+                    const py = y + size * Math.sin(angle);
+                    if (i === 0) ctx.moveTo(px, py);
+                    else ctx.lineTo(px, py);
+                }
+                ctx.closePath();
+                ctx.stroke();
+            }
+        }
+    }
+
+    drawDigitalGlitch() {
+        const ctx = this.ctx;
+        for (let i = 0; i < 5; i++) {
+            ctx.fillStyle = Math.random() > 0.5 ? 'rgba(255, 0, 0, 0.3)' : 'rgba(255, 255, 255, 0.1)';
+            const x = Math.random() * CANVAS_WIDTH;
+            const y = Math.random() * CANVAS_HEIGHT;
+            const w = Math.random() * 100 + 50;
+            const h = Math.random() * 5 + 1;
+            ctx.fillRect(x, y, w, h);
+        }
+    }
+
+    drawWarningBands(progress) {
+        const ctx = this.ctx;
+        const bandH = 40;
+        const offset = (progress * 500) % 200; // 5000ms / 10 = 500
+
+        // 上下の帯
+        [0, CANVAS_HEIGHT - bandH].forEach((y, idx) => {
+            ctx.fillStyle = '#f00';
+            ctx.fillRect(0, y, CANVAS_WIDTH, bandH);
+
+            ctx.fillStyle = '#000';
+            ctx.font = 'bold 20px "Segoe UI"';
+            ctx.textAlign = 'left';
+            const text = "  WARNING  EMERGENCY  DANGER  ";
+            for (let i = -1; i < 3; i++) {
+                const tx = i * 400 + (idx === 0 ? -offset : offset);
+                ctx.fillText(text, tx, y + 28);
+            }
+        });
+    }
+
+    drawWarningMainText(progress) {
+        const ctx = this.ctx;
+        const cx = CANVAS_WIDTH / 2;
+        const cy = CANVAS_HEIGHT / 2;
+
+        // 点滅効果
+        const flash = Math.floor(Date.now() / 200) % 2 === 0;
+        if (!flash) return;
+
+        ctx.save();
+        ctx.translate(cx, cy);
+
+        // グリッチ的なズレ
+        const offX = (Math.random() - 0.5) * 4;
+        const offY = (Math.random() - 0.5) * 4;
+
+        // グロー効果
+        ctx.shadowColor = '#f00';
+        ctx.shadowBlur = 20;
+
+        ctx.fillStyle = '#fff';
+        ctx.font = 'italic bold 80px "Segoe UI"';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        
+        ctx.fillText('WARNING', offX, offY);
+
+        // デジタルノイズ（文字に重ねる横線）
+        ctx.fillStyle = 'rgba(255,255,255,0.4)';
+        for (let i = 0; i < 3; i++) {
+            const ly = (Math.random() - 0.5) * 80;
+            ctx.fillRect(-200, ly, 400, 2);
+        }
+
+        ctx.restore();
     }
 
     // --------- レベルアップ処理 ---------
@@ -1651,8 +1796,25 @@ class Game {
         ctx.fillStyle = '#aaa';
         ctx.fillText('難易度: ★★☆☆☆', s1X + 20, s2Y + 60);
 
-        // Coming Soon (Stage 3以降)
-        for (let i = 2; i <= 4; i++) {
+        // Stage 3: BOSS
+        const s3Y = 350;
+        const s3W = 350, s3H = 80;
+        ctx.fillStyle = 'rgba(244, 67, 54, 0.2)';
+        ctx.strokeStyle = '#f44336';
+        ctx.beginPath();
+        ctx.roundRect(s1X, s3Y, s3W, s3H, 10);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 22px "Segoe UI"';
+        ctx.fillText('Stage 3: BOSS', s1X + 20, s3Y + 35);
+        ctx.font = '14px "Segoe UI"';
+        ctx.fillStyle = '#f44336';
+        ctx.fillText('難易度: ★★★★★ (DANGER)', s1X + 20, s3Y + 60);
+
+        // Coming Soon (Stage 4以降)
+        for (let i = 3; i <= 4; i++) {
             const sy = 150 + i * 100;
             ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
             ctx.strokeStyle = '#444';
