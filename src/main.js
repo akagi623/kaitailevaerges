@@ -262,7 +262,7 @@ class Game {
         this.levelManager.init(stageId);
         this.gameState = GAME_STATE.PLAYING;
         this.gameStarted = true;
-        this.entranceEndTime = Date.now() + 500;
+        this.entranceEndTime = Date.now() + 3500; // 3.5秒のカウントダウン
         this.bgm.play().catch(e => console.error("Audio playback failed:", e));
     }
 
@@ -599,14 +599,9 @@ class Game {
 
         // 必殺技ゲージは draw()内で描画済み（パドルの後本になるためここでは非募務）
 
-        // 現場入場！フラッシュ
+        // カウントダウン演出
         if (this.gameStarted && Date.now() < this.entranceEndTime) {
-            this.ctx.fillStyle = 'rgba(0,0,0,0.5)';
-            this.ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-            this.ctx.fillStyle = '#ffeb3b';
-            this.ctx.font = 'bold 56px "Segoe UI"';
-            this.ctx.textAlign = 'center';
-            this.ctx.fillText('現場入場！', CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2);
+            this.drawCountdown();
             return;
         }
 
@@ -632,6 +627,71 @@ class Game {
             this.drawOverlay('GAME OVER', '#ff5252');
         } else if (this.gameWin) {
             this.drawResultScreen();
+        }
+    }
+
+    drawCountdown() {
+        const ctx = this.ctx;
+        const now = Date.now();
+        const remaining = this.entranceEndTime - now;
+        
+        // 背景オーバーレイ
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+        let text = '';
+        let color = '#fff';
+        let progress = 0; // 0 to 1 within each second
+
+        if (remaining > 2500) {
+            text = '3';
+            color = '#ffeb3b'; // Yellow
+            progress = (3500 - remaining) / 1000;
+        } else if (remaining > 1500) {
+            text = '2';
+            color = '#ff9800'; // Orange
+            progress = (2500 - remaining) / 1000;
+        } else if (remaining > 500) {
+            text = '1';
+            color = '#f44336'; // Red
+            progress = (1500 - remaining) / 1000;
+        } else {
+            text = 'GO!';
+            color = '#ffffff';
+            progress = (500 - remaining) / 500;
+        }
+
+        if (text) {
+            ctx.save();
+            ctx.translate(CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2);
+            
+            // スタイリッシュな演出: ズームとフェード
+            // 進捗に合わせて拡大し、後半で消えていく
+            const scale = 0.5 + progress * 2.5; 
+            const alpha = remaining > 500 ? (1 - progress * 0.5) : (1 - progress);
+            
+            ctx.globalAlpha = Math.max(0, alpha);
+            
+            // わずかに斜めにする
+            ctx.rotate(-0.1);
+            ctx.scale(scale, scale);
+            
+            // グロー効果
+            ctx.shadowColor = color;
+            ctx.shadowBlur = 30;
+            
+            ctx.fillStyle = color;
+            ctx.font = 'italic bold 100px "Segoe UI"';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            
+            // 外枠（ストローク）を入れてよりスタイリッシュに
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 2;
+            ctx.strokeText(text, 0, 0);
+            ctx.fillText(text, 0, 0);
+            
+            ctx.restore();
         }
     }
 
