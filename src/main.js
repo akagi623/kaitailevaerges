@@ -133,7 +133,7 @@ class Game {
         this.warningStartTime = 0;
         this.warningActive = false;
         this.warningShown = false;
-        this.warningDuration = 3000;
+        this.warningDuration = 1500;
         this.isBossIntro = false;
     }
 
@@ -954,7 +954,7 @@ class Game {
         const elapsedMs = this.warningActive
             ? (now - this.warningStartTime)
             : (3000 - Math.max(0, this.entranceEndTime - now));
-        const totalDuration = this.warningDuration || 3000;
+        const totalDuration = this.warningDuration || 1500;
         const progress = Math.min(1, elapsedMs / totalDuration);
         
         ctx.save();
