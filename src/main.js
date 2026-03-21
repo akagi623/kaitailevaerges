@@ -295,6 +295,16 @@ class Game {
     initAudio() {
         if (!this.audioCtx) {
             this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+            // マスターGainノード: 一箇所でボリューム制御
+            this.masterGain = this.audioCtx.createGain();
+            this.masterGain.gain.value = 1.0;
+            this.masterGain.connect(this.audioCtx.destination);
+
+            // 同時再生数管理
+            this._activeSECount = 0;
+            this._maxSE = 8; // 同時に鳴らせるSEの最大数
+
             const loadSE = (path) => fetch(path)
                 .then(r => r.arrayBuffer())
                 .then(buf => this.audioCtx.decodeAudioData(buf));
@@ -304,6 +314,10 @@ class Game {
             loadSE('soundeffect/laser.mp3').then(b => { this.laserSEBuffer = b; }).catch(e => console.error('Laser SE load failed:', e));
             loadSE('soundeffect/padolstrech.mp3').then(b => { this.paddleStretchSEBuffer = b; }).catch(e => console.error('Paddle SE load failed:', e));
             loadSE('soundeffect/levelup.mp3').then(b => { this.levelupSEBuffer = b; }).catch(e => console.error('LevelUp SE load failed:', e));
+        }
+        // suspended状態（ブラウザの自動再生ポリシー）から確実に復帰する
+        if (this.audioCtx.state === 'suspended') {
+            this.audioCtx.resume();
         }
     }
 
@@ -736,7 +750,7 @@ class Game {
             ctx.fillRect(cx - gs, cy - gs, gs * 2, gs * 2);
         }
         ctx.shadowColor = color;
-        ctx.shadowBlur = Math.min(60, 15 + combo * 5);
+        ctx.shadowBlur = Math.min(30, 8 + combo * 3); // 負荷軽減のため上限を下げる
         const sx = combo >= 3 ? (Math.random() - 0.5) * combo * 0.5 : 0;
         const sy = combo >= 3 ? (Math.random() - 0.5) * 2 : 0;
         ctx.fillStyle = color;
@@ -826,15 +840,25 @@ class Game {
 
     _playBeep(freqStart, freqEnd, duration, volume) {
         if (!this.audioCtx) return;
+        if (this.audioCtx.state === 'suspended') { this.audioCtx.resume(); return; }
+        if ((this._activeSECount || 0) >= (this._maxSE || 8)) return;
+        this._activeSECount = (this._activeSECount || 0) + 1;
         const osc = this.audioCtx.createOscillator();
         const gain = this.audioCtx.createGain();
         osc.type = 'sine';
         osc.frequency.setValueAtTime(freqStart, this.audioCtx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(freqEnd, this.audioCtx.currentTime + duration);
+        osc.frequency.exponentialRampToValueAtTime(Math.max(1, freqEnd), this.audioCtx.currentTime + duration);
         gain.gain.setValueAtTime(volume, this.audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, this.audioCtx.currentTime + duration);
-        osc.connect(gain); gain.connect(this.audioCtx.destination);
-        osc.start(); osc.stop(this.audioCtx.currentTime + duration);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(this.masterGain || this.audioCtx.destination);
+        osc.onended = () => {
+            gain.disconnect();
+            osc.disconnect();
+            this._activeSECount = Math.max(0, (this._activeSECount || 1) - 1);
+        };
+        osc.start();
+        osc.stop(this.audioCtx.currentTime + duration + 0.01);
     }
 
     drawCountdown() {
@@ -1353,30 +1377,43 @@ class Game {
 
     playWebAudioSE(buffer, volume = 0.6) {
         if (!this.audioCtx || !buffer) return;
+        if (this.audioCtx.state === 'suspended') { this.audioCtx.resume(); return; }
+        if ((this._activeSECount || 0) >= (this._maxSE || 8)) return; // 同時再生数制限
+        this._activeSECount = (this._activeSECount || 0) + 1;
         const source = this.audioCtx.createBufferSource();
         source.buffer = buffer;
         const gain = this.audioCtx.createGain();
         gain.gain.value = volume;
         source.connect(gain);
-        gain.connect(this.audioCtx.destination);
+        gain.connect(this.masterGain || this.audioCtx.destination);
+        source.onended = () => {
+            gain.disconnect();
+            source.disconnect();
+            this._activeSECount = Math.max(0, (this._activeSECount || 1) - 1);
+        };
         source.start();
     }
 
     playHitSE() {
         const now = Date.now();
-        if (now - this.lastSETime < 40) return; // 40ms以内の連打は無視
+        if (now - this.lastSETime < 50) return; // 50ms以内の連打は無視
         this.lastSETime = now;
-
-        // Web Audio APIで即時再生（メインスレッドに影響なし）
-        if (this.audioCtx && this.hitSEBuffer) {
-            const source = this.audioCtx.createBufferSource();
-            source.buffer = this.hitSEBuffer;
-            const gainNode = this.audioCtx.createGain();
-            gainNode.gain.value = 0.6;
-            source.connect(gainNode);
-            gainNode.connect(this.audioCtx.destination);
-            source.start();
-        }
+        if (!this.audioCtx || !this.hitSEBuffer) return;
+        if (this.audioCtx.state === 'suspended') { this.audioCtx.resume(); return; }
+        if ((this._activeSECount || 0) >= (this._maxSE || 8)) return;
+        this._activeSECount = (this._activeSECount || 0) + 1;
+        const source = this.audioCtx.createBufferSource();
+        source.buffer = this.hitSEBuffer;
+        const gainNode = this.audioCtx.createGain();
+        gainNode.gain.value = 0.5;
+        source.connect(gainNode);
+        gainNode.connect(this.masterGain || this.audioCtx.destination);
+        source.onended = () => {
+            gainNode.disconnect();
+            source.disconnect();
+            this._activeSECount = Math.max(0, (this._activeSECount || 1) - 1);
+        };
+        source.start();
     }
 
     increaseBallSpeed(amount) {
@@ -1429,8 +1466,10 @@ class Game {
     }
 
     loop(timestamp) {
-        const deltaTime = timestamp - this.lastTime;
+        const raw = timestamp - this.lastTime;
         this.lastTime = timestamp;
+        // タブ切り替え後など極端なdeltaTimeを100msにクランプ
+        const deltaTime = Math.min(raw, 100);
 
         this.update(deltaTime);
         this.draw();
