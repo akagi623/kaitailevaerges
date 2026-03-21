@@ -153,4 +153,16 @@ export class LevelManager {
         const issueBrick = this.bricks.find(b => b.isIssue);
         return issueBrick ? !issueBrick.active : false;
     }
+
+    // 電磁爆弾: 全アクティブブロック（コアブロック除く）にダメージ
+    bombDamageAll(damage) {
+        let count = 0;
+        for (let brick of this.bricks) {
+            if (brick.active && !brick.isIssue) {
+                brick.hit(damage);
+                count++;
+            }
+        }
+        return count;
+    }
 }

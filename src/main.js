@@ -3,8 +3,33 @@ import { Ball } from './Ball.js';
 import { Paddle } from './Paddle.js';
 import { LevelManager } from './LevelManager.js';
 import { EffectManager } from './EffectManager.js';
-import { Item, ITEM_TYPES } from './Item.js';
+import { Item, ITEM_TYPES, getRandomItemType } from './Item.js';
 import { Player } from './Player.js';
+
+// ========== キャラクターデータ ==========
+const CHARACTERS = [
+    {
+        id: 'yasu',
+        name: '熱血ルーキー ヤス',
+        desc: 'バランス型。熱量でカバーする現場の新人。',
+        attack: 10, speed: 8, defense: 100,
+        color: '#ffeb3b', badge: '🔥',
+    },
+    {
+        id: 'ryou',
+        name: 'クールエース リョウ',
+        desc: 'スピード特化。冷静な判断で現場を制す。',
+        attack: 8, speed: 13, defense: 80,
+        color: '#4fc3f7', badge: '❄',
+    },
+    {
+        id: 'saki',
+        name: 'ギャルクラッシャー サキ',
+        desc: '攻撃特化。ブチ壊し系最強ギャル解体師。',
+        attack: 20, speed: 7, defense: 100,
+        color: '#f06292', badge: '💥',
+    },
+];
 
 class Game {
     constructor() {
@@ -38,6 +63,9 @@ class Game {
         this.laserSEBuffer = null;
         this.paddleStretchSEBuffer = null;
         this.levelupSEBuffer = null;
+
+        // キャラクター選択インデックス
+        this.selectedCharIndex = 0;
 
         // リスナー登録
         this.setupStartListener();
@@ -90,6 +118,23 @@ class Game {
         this.hasShownRespawn = false;
         this.hasShownIssue = false;
         this.tutorialTargetBrick = null;
+
+        // アクティブエフェクト管理（時限式バフ）
+        this.activeEffects = {
+            powerChip: 0,
+            magnetBoot: 0,
+            speedWire: 0,
+            comboShield: 0,
+        };
+        this.nanoShieldActive = false;
+        this.comboShieldActive = false;
+
+        // WARNINGエフェクト
+        this.warningStartTime = 0;
+        this.warningActive = false;
+        this.warningShown = false;
+        this.warningDuration = 3000;
+        this.isBossIntro = false;
     }
 
     setupStartListener() {
@@ -110,10 +155,23 @@ class Game {
                     this.gameState = GAME_STATE.CHAR_SELECT;
                 }
             } else if (this.gameState === GAME_STATE.CHAR_SELECT) {
+                // 選択ボタン (中央下)
                 const btnX = CANVAS_WIDTH / 2 - 120;
-                const btnY = CANVAS_HEIGHT / 2 + 140;
-                if (canvasX > btnX && canvasX < btnX + 240 && canvasY > btnY && canvasY < btnY + 70) {
+                const btnY = CANVAS_HEIGHT / 2 + 155;
+                if (canvasX > btnX && canvasX < btnX + 240 && canvasY > btnY && canvasY < btnY + 60) {
+                    const chara = CHARACTERS[this.selectedCharIndex];
+                    this.player.attack = chara.attack;
+                    this.player.speed = chara.speed;
+                    this.player.defense = chara.defense;
                     this.gameState = GAME_STATE.STAGE_SELECT;
+                }
+                // 左矢印
+                if (canvasX > 20 && canvasX < 70 && canvasY > CANVAS_HEIGHT / 2 - 40 && canvasY < CANVAS_HEIGHT / 2 + 40) {
+                    this.selectedCharIndex = (this.selectedCharIndex - 1 + CHARACTERS.length) % CHARACTERS.length;
+                }
+                // 右矢印
+                if (canvasX > CANVAS_WIDTH - 70 && canvasX < CANVAS_WIDTH - 20 && canvasY > CANVAS_HEIGHT / 2 - 40 && canvasY < CANVAS_HEIGHT / 2 + 40) {
+                    this.selectedCharIndex = (this.selectedCharIndex + 1) % CHARACTERS.length;
                 }
                 
                 // プロショップボタン (右上へ移動)
@@ -265,11 +323,10 @@ class Game {
             this.hasShownIssue = false;
         }
         this.levelManager.init(stageId);
-        const config = STAGE_CONFIG[stageId];
         this.gameState = GAME_STATE.PLAYING;
         this.gameStarted = true;
-        this.isBossIntro = !!(config && config.isBossStage);
-        this.entranceEndTime = Date.now() + (this.isBossIntro ? 5000 : 3500); 
+        this.isBossIntro = false;
+        this.entranceEndTime = Date.now() + 3500; // 全ステージ共通
         this.bgm.play().catch(e => console.error("Audio playback failed:", e));
     }
 
@@ -313,15 +370,39 @@ class Game {
                 }
             },
             (brick) => {
+                // コアブロック出現: WARNINGエフェクトをトリガー
+                if (!this.warningShown) {
+                    this.warningShown = true;
+                    this.warningActive = true;
+                    this.warningStartTime = Date.now();
+                }
                 if (!this.hasShownIssue) {
                     this.hasShownIssue = true;
-                    this.showTutorial(3.1, brick);
+                    setTimeout(() => { this.showTutorial(3.1, brick); }, this.warningDuration);
                 }
             }
         );
+
+        // WARNINGエフェクト終了チェック
+        if (this.warningActive && Date.now() - this.warningStartTime > this.warningDuration) {
+            this.warningActive = false;
+        }
         
+        // アクティブエフェクトタイマー管理
+        for (const key of Object.keys(this.activeEffects)) {
+            if (this.activeEffects[key] > 0) {
+                this.activeEffects[key] = Math.max(0, this.activeEffects[key] - deltaTime);
+                if (this.activeEffects[key] === 0 && key === 'speedWire') {
+                    const spd = Math.sqrt(this.ball.dx * this.ball.dx + this.ball.dy * this.ball.dy);
+                    if (spd > 0) { const r = (spd / 1.2) / spd; this.ball.dx *= r; this.ball.dy *= r; }
+                }
+            }
+        }
+        this.comboShieldActive = this.activeEffects.comboShield > 0;
+
         // コンボとプレイヤー攻撃力に応じたダメージ計算
-        const currentDamage = Math.floor(this.player.getTotalAttack(EQUIPMENT_DATA) * Math.pow(1.5, Math.max(0, this.combo)));
+        const attackMult = this.activeEffects.powerChip > 0 ? 2 : 1;
+        const currentDamage = Math.floor(this.player.getTotalAttack(EQUIPMENT_DATA) * attackMult * Math.pow(1.5, Math.max(0, this.combo)));
 
         // ブロックとの衝突判定
         const collisionResult = this.levelManager.checkCollision(this.ball, currentDamage);
@@ -370,13 +451,12 @@ class Game {
                     this.onLevelUp();
                 }
 
-                // アイテム（資金）確率ドロップ
+                // アイテム確率ドロップ（重み付きランダム）
                 if (Math.random() < MONEY_DROP_RATE) {
-                    this.items.push(new Item(
-                        collisionResult.brick.x + collisionResult.brick.width / 2 - 7.5,
-                        collisionResult.brick.y + collisionResult.brick.height / 2 - 7.5,
-                        ITEM_TYPES.MONEY
-                    ));
+                    const itemType = getRandomItemType();
+                    const bx = collisionResult.brick.x + collisionResult.brick.width / 2;
+                    const by = collisionResult.brick.y + collisionResult.brick.height / 2;
+                    this.items.push(new Item(bx, by, itemType));
                 }
             }
             
@@ -397,14 +477,13 @@ class Game {
             const item = this.items[i];
             item.update(this.paddle);
 
-            // お金の吸い込み判定（パドルの当たり判定より少し広い）
-            if (item.type === ITEM_TYPES.MONEY && item.state === 'NORMAL') {
+            // 全アイテム共通の磁石拾い判定
+            if (item.state === 'NORMAL') {
                 const paddleCenterX = this.paddle.x + this.paddle.width / 2;
                 const itemCenterX = item.x + item.width / 2;
-                
-                // y軸はある程度パドルに近く、x軸がパドル周辺なら吸い込み開始
-                if (item.y + item.height > this.paddle.y - MAGNET_RADIUS && 
-                    Math.abs(itemCenterX - paddleCenterX) < (this.paddle.width / 2) + MAGNET_RADIUS) {
+                const magnetR = MAGNET_RADIUS * (this.activeEffects.magnetBoot > 0 ? 2 : 1);
+                if (item.y + item.height > this.paddle.y - magnetR && 
+                    Math.abs(itemCenterX - paddleCenterX) < (this.paddle.width / 2) + magnetR) {
                     item.startSuction();
                 }
             }
@@ -416,28 +495,7 @@ class Game {
                 item.y + item.height > this.paddle.y &&
                 item.y + item.height/2 < this.paddle.y + this.paddle.height) {
                 
-                // アイテム効果
-                if (item.type === ITEM_TYPES.EXPAND) {
-                    this.paddle.width += 20;
-                    this.playWebAudioSE(this.paddleStretchSEBuffer, 0.7);
-                } else if (item.type === ITEM_TYPES.MONEY) {
-                    this.player.money += 100; // 金額設定
-                    this.player.save(); // お金拾った時にセーブ
-                    // SE（短いビープ）
-                    if (this.audioCtx) {
-                        const osc = this.audioCtx.createOscillator();
-                        const gain = this.audioCtx.createGain();
-                        osc.type = 'sine';
-                        osc.frequency.setValueAtTime(880, this.audioCtx.currentTime); // A5
-                        osc.frequency.exponentialRampToValueAtTime(1760, this.audioCtx.currentTime + 0.1); // A6
-                        gain.gain.setValueAtTime(0.3, this.audioCtx.currentTime);
-                        gain.gain.exponentialRampToValueAtTime(0.01, this.audioCtx.currentTime + 0.1);
-                        osc.connect(gain);
-                        gain.connect(this.audioCtx.destination);
-                        osc.start();
-                        osc.stop(this.audioCtx.currentTime + 0.1);
-                    }
-                }
+                this._applyItemEffect(item);
                 item.active = false;
             }
             
@@ -469,26 +527,39 @@ class Game {
             // ボールが下に行き過ぎないように調整
             this.ball.y = this.paddle.y - this.ball.radius;
             
-            // パドルに当たったらコンボリセット
-            this.combo = 0;
+            // コンボシールドがなければコンボリセット
+            if (!this.comboShieldActive) {
+                this.combo = 0;
+            }
         }
 
         // ミス（底に落ちた場合）
         if (this.ball.y + this.ball.radius > CANVAS_HEIGHT) {
-            this.lives--;
-            this.combo = 0; // コンボリセット（lastComboは保持される）
-            if (this.lives <= 0 && !this.gameOver) {
-                this.gameOver = true;
-                this.stopBGM();
-                this.playWebAudioSE(this.loseSEBuffer, 0.5);
-            } else {
-                // リセット
-                this.speedMultiplier = 1.0; // スピードリセット
+            if (this.nanoShieldActive) {
+                // ナノシールド発動: ミス無効化
+                this.nanoShieldActive = false;
+                this.speedMultiplier = 1.0;
                 this.ball.x = CANVAS_WIDTH / 2;
                 this.ball.y = CANVAS_HEIGHT - 50;
                 this.ball.dx = BALL_INITIAL_SPEED;
                 this.ball.dy = -BALL_INITIAL_SPEED;
                 this.paddle.x = (CANVAS_WIDTH - this.paddle.width) / 2;
+                this.effectManager.createExplosion(CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2, 30);
+            } else {
+                this.lives--;
+                this.combo = 0;
+                if (this.lives <= 0 && !this.gameOver) {
+                    this.gameOver = true;
+                    this.stopBGM();
+                    this.playWebAudioSE(this.loseSEBuffer, 0.5);
+                } else {
+                    this.speedMultiplier = 1.0;
+                    this.ball.x = CANVAS_WIDTH / 2;
+                    this.ball.y = CANVAS_HEIGHT - 50;
+                    this.ball.dx = BALL_INITIAL_SPEED;
+                    this.ball.dy = -BALL_INITIAL_SPEED;
+                    this.paddle.x = (CANVAS_WIDTH - this.paddle.width) / 2;
+                }
             }
         }
     }
@@ -570,15 +641,10 @@ class Game {
             this.ctx.fillText('⏸', px + 18, py + 19);
         }
 
-        // 2行目: LEVERAGEの表示
+        // 2行目: LEVERAGE!（強化版エフェクト）
         const displayCombo = this.combo > 0 ? this.combo : this.lastCombo;
         if (displayCombo > 0 || this.tutorialState === 1.1 || this.tutorialState === 1.2) {
-            const forceCombo = displayCombo > 0 ? displayCombo : 1;
-            const label = forceCombo >= 2 ? 'LEVERAGES!' : 'LEVERAGE!';
-            this.ctx.fillStyle = forceCombo > 0 ? '#ffeb3b' : '#9e9e9e';
-            this.ctx.font = 'bold 28px "Segoe UI"'; // 大きく
-            this.ctx.textAlign = 'center';
-            this.ctx.fillText(`${forceCombo} ${label}`, CANVAS_WIDTH / 2, 60);
+            this.drawLeverageEffect(displayCombo > 0 ? displayCombo : 1);
         }
 
         // 3行目: EXPバー（左 Lv表示 + ゲージ）
@@ -606,13 +672,18 @@ class Game {
 
         // 必殺技ゲージは draw()内で描画済み（パドルの後本になるためここでは非募務）
 
+        // アクティブアイテムバフインジケーター
+        this.drawActiveEffectIndicators();
+
         // カウントダウン演出
         if (this.gameStarted && Date.now() < this.entranceEndTime) {
-            if (this.isBossIntro) {
-                this.drawBossWarning();
-            } else {
-                this.drawCountdown();
-            }
+            this.drawCountdown();
+            return;
+        }
+
+        // コアブロック出現WARNING
+        if (this.warningActive) {
+            this.drawBossWarning();
             return;
         }
 
@@ -641,67 +712,214 @@ class Game {
         }
     }
 
+
+    drawLeverageEffect(combo) {
+        const ctx = this.ctx;
+        const cx = CANVAS_WIDTH / 2;
+        const cy = 56;
+        const now = Date.now();
+        const label = combo >= 2 ? 'LEVERAGES!' : 'LEVERAGE!';
+        const text = `${combo} ${label}`;
+        let color;
+        if (combo >= 11) { color = `hsl(${(now / 20) % 360},100%,60%)`; }
+        else if (combo >= 6) { color = '#ff4444'; }
+        else if (combo >= 3) { color = '#ff9800'; }
+        else { color = '#ffeb3b'; }
+        ctx.save();
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.font = `italic bold ${Math.min(32, 22 + combo * 1.5)}px "Segoe UI"`;
+        if (combo >= 3) {
+            const gs = 40 + combo * 8;
+            const rg = ctx.createRadialGradient(cx, cy, 0, cx, cy, gs);
+            rg.addColorStop(0, color + '44'); rg.addColorStop(1, 'transparent');
+            ctx.fillStyle = rg;
+            ctx.fillRect(cx - gs, cy - gs, gs * 2, gs * 2);
+        }
+        ctx.shadowColor = color;
+        ctx.shadowBlur = Math.min(60, 15 + combo * 5);
+        const sx = combo >= 3 ? (Math.random() - 0.5) * combo * 0.5 : 0;
+        const sy = combo >= 3 ? (Math.random() - 0.5) * 2 : 0;
+        ctx.fillStyle = color;
+        ctx.strokeStyle = 'rgba(0,0,0,0.8)'; ctx.lineWidth = 3;
+        ctx.strokeText(text, cx + sx, cy + sy);
+        ctx.fillText(text, cx + sx, cy + sy);
+        if (combo >= 6) {
+            ctx.globalAlpha = 0.3; ctx.fillStyle = color;
+            ctx.fillRect(cx - 150, cy - 20, 300, 2);
+            ctx.fillRect(cx - 150, cy + 20, 300, 2);
+            ctx.globalAlpha = 1;
+        }
+        ctx.restore();
+    }
+
+    drawActiveEffectIndicators() {
+        const ctx = this.ctx;
+        const effects = [];
+        if (this.activeEffects.powerChip > 0) effects.push({ label: '⚡ATK×2', color: '#ff9800', t: this.activeEffects.powerChip });
+        if (this.activeEffects.magnetBoot > 0) effects.push({ label: '🧲MAG×2', color: '#ab47bc', t: this.activeEffects.magnetBoot });
+        if (this.activeEffects.speedWire > 0) effects.push({ label: '🔵SPEED↑', color: '#4fc3f7', t: this.activeEffects.speedWire });
+        if (this.activeEffects.comboShield > 0) effects.push({ label: '🔒COMBO', color: '#66bb6a', t: this.activeEffects.comboShield });
+        if (this.nanoShieldActive) effects.push({ label: '🛡SHIELD', color: '#fff176', t: 1 });
+        if (effects.length === 0) return;
+        ctx.save();
+        ctx.font = 'bold 11px "Segoe UI"';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        let x = 15, y = 120;
+        for (const e of effects) {
+            ctx.fillStyle = e.color + 'cc';
+            ctx.fillRoundRect ? ctx.fillRoundRect(x, y - 8, 70, 16, 4) : ctx.fillRect(x, y - 8, 70, 16);
+            ctx.fillStyle = '#000';
+            ctx.fillText(e.label, x + 2, y);
+            x += 74;
+            if (x > CANVAS_WIDTH - 80) { x = 15; y += 20; }
+        }
+        ctx.restore();
+    }
+
+    _applyItemEffect(item) {
+        const T = ITEM_TYPES;
+        switch (item.type) {
+            case T.MONEY:
+                this.player.money += 100; this.player.save();
+                this._playBeep(880, 1760, 0.1, 0.3); break;
+            case T.EXPAND:
+                this.paddle.width += 20;
+                this.playWebAudioSE(this.paddleStretchSEBuffer, 0.7); break;
+            case T.POWER_CHIP:
+                this.activeEffects.powerChip = 15000;
+                this._playBeep(523, 880, 0.2, 0.5); break;
+            case T.NANO_SHIELD:
+                this.nanoShieldActive = true;
+                this._playBeep(440, 880, 0.2, 0.5); break;
+            case T.MAGNET_BOOT:
+                this.activeEffects.magnetBoot = 10000;
+                this._playBeep(330, 660, 0.2, 0.5); break;
+            case T.SPEED_WIRE:
+                if (this.activeEffects.speedWire <= 0) this.increaseBallSpeed(0.2);
+                this.activeEffects.speedWire = 8000;
+                this._playBeep(660, 1320, 0.15, 0.5); break;
+            case T.WIDE_PLATE:
+                this.paddle.width += 40; this.player.defense += 40;
+                this.playWebAudioSE(this.paddleStretchSEBuffer, 1.0); break;
+            case T.BOMB: {
+                const cnt = this.levelManager.bombDamageAll(20);
+                this.effectManager.createExplosion(CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2, 40);
+                this.score += cnt * 20;
+                this._playBeep(200, 100, 0.3, 0.8); break;
+            }
+            case T.GAUGE_PACK:
+                this.specialGauge = Math.min(SPECIAL_GAUGE_MAX, this.specialGauge + 50);
+                this._playBeep(880, 1760, 0.15, 0.4); break;
+            case T.REPAIR_KIT:
+                if (this.lives < 5) { this.lives++; this._playBeep(523, 1047, 0.2, 0.5); } break;
+            case T.COMBO_STONE:
+                this.activeEffects.comboShield = 10000;
+                this._playBeep(600, 1200, 0.2, 0.5); break;
+            case T.EXP_BOOSTER: {
+                const lv = this.player.addExp(50);
+                if (lv) this.onLevelUp();
+                this._playBeep(440, 1760, 0.2, 0.6); break;
+            }
+        }
+    }
+
+    _playBeep(freqStart, freqEnd, duration, volume) {
+        if (!this.audioCtx) return;
+        const osc = this.audioCtx.createOscillator();
+        const gain = this.audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freqStart, this.audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(freqEnd, this.audioCtx.currentTime + duration);
+        gain.gain.setValueAtTime(volume, this.audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.audioCtx.currentTime + duration);
+        osc.connect(gain); gain.connect(this.audioCtx.destination);
+        osc.start(); osc.stop(this.audioCtx.currentTime + duration);
+    }
+
     drawCountdown() {
         const ctx = this.ctx;
         const now = Date.now();
         const remaining = this.entranceEndTime - now;
-        
-        // 背景オーバーレイ
-        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+
+        // 暗いオーバーレイ
+        ctx.fillStyle = 'rgba(0,0,0,0.55)';
         ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+        // デジタルグリッド背景
+        ctx.strokeStyle = 'rgba(0,200,255,0.06)';
+        ctx.lineWidth = 1;
+        for (let x = 0; x < CANVAS_WIDTH; x += 30) {
+            ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, CANVAS_HEIGHT); ctx.stroke();
+        }
+        for (let y = 0; y < CANVAS_HEIGHT; y += 30) {
+            ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(CANVAS_WIDTH, y); ctx.stroke();
+        }
 
         let text = '';
         let color = '#fff';
-        let progress = 0; // 0 to 1 within each second
+        let localProgress = 0;
 
         if (remaining > 2500) {
-            text = '3';
-            color = '#ffeb3b'; // Yellow
-            progress = (3500 - remaining) / 1000;
+            text = '3'; color = '#ffeb3b';
+            localProgress = Math.min(1, (3500 - remaining) / 1000);
         } else if (remaining > 1500) {
-            text = '2';
-            color = '#ff9800'; // Orange
-            progress = (2500 - remaining) / 1000;
+            text = '2'; color = '#ff9800';
+            localProgress = Math.min(1, (2500 - remaining) / 1000);
         } else if (remaining > 500) {
-            text = '1';
-            color = '#f44336'; // Red
-            progress = (1500 - remaining) / 1000;
+            text = '1'; color = '#f44336';
+            localProgress = Math.min(1, (1500 - remaining) / 1000);
         } else {
-            text = 'GO!';
-            color = '#ffffff';
-            progress = (500 - remaining) / 500;
+            text = 'START!'; color = '#ffffff';
+            localProgress = Math.min(1, (500 - remaining) / 500);
         }
 
+        const cx = CANVAS_WIDTH / 2;
+        const cy = CANVAS_HEIGHT / 2;
+
         if (text) {
+            // 衝撃波リング
+            if (localProgress < 0.5 && text !== 'START!') {
+                const ringP = localProgress / 0.5;
+                const ringR = ringP * 180;
+                ctx.save();
+                ctx.globalAlpha = (1 - ringP) * 0.6;
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 4 * (1 - ringP) + 1;
+                ctx.shadowColor = color; ctx.shadowBlur = 20;
+                ctx.beginPath(); ctx.arc(cx, cy, ringR, 0, Math.PI * 2); ctx.stroke();
+                ctx.restore();
+            }
+
+            // START!の全画面フラッシュ
+            if (text === 'START!' && localProgress < 0.3) {
+                ctx.save();
+                ctx.globalAlpha = (0.3 - localProgress) / 0.3 * 0.8;
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+                ctx.restore();
+            }
+
             ctx.save();
-            ctx.translate(CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2);
-            
-            // スタイリッシュな演出: ズームとフェード
-            // 進捗に合わせて拡大し、後半で消えていく
-            const scale = 0.5 + progress * 2.5; 
-            const alpha = remaining > 500 ? (1 - progress * 0.5) : (1 - progress);
-            
-            ctx.globalAlpha = Math.max(0, alpha);
-            
-            // わずかに斜めにする
-            ctx.rotate(-0.1);
+            ctx.translate(cx, cy);
+            const scale = text === 'START!' ? 1 + localProgress * 0.5 : 0.3 + localProgress * 1.2;
+            const alpha = text === 'START!' ? Math.max(0, 1 - localProgress * 1.5) : Math.max(0, 1 - localProgress * 0.4);
+            ctx.globalAlpha = alpha;
             ctx.scale(scale, scale);
-            
-            // グロー効果
-            ctx.shadowColor = color;
-            ctx.shadowBlur = 30;
-            
+            ctx.shadowColor = color; ctx.shadowBlur = 40;
             ctx.fillStyle = color;
-            ctx.font = 'italic bold 100px "Segoe UI"';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            
-            // 外枠（ストローク）を入れてよりスタイリッシュに
             ctx.strokeStyle = '#000';
-            ctx.lineWidth = 2;
+            ctx.lineWidth = text === 'START!' ? 2 : 4;
+            ctx.font = `italic bold ${text === 'START!' ? 70 : 120}px "Segoe UI"`;
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
             ctx.strokeText(text, 0, 0);
             ctx.fillText(text, 0, 0);
-            
+            // 残像エコー
+            if (text !== 'START!' && localProgress > 0.3) {
+                ctx.globalAlpha = alpha * 0.2;
+                ctx.scale(1.15, 1.15);
+                ctx.fillText(text, 0, 0);
+            }
             ctx.restore();
         }
     }
@@ -709,9 +927,11 @@ class Game {
     drawBossWarning() {
         const ctx = this.ctx;
         const now = Date.now();
-        const remaining = Math.max(0, this.entranceEndTime - now);
-        const totalDuration = 5000;
-        const progress = 1 - (remaining / totalDuration);
+        const elapsedMs = this.warningActive
+            ? (now - this.warningStartTime)
+            : (3000 - Math.max(0, this.entranceEndTime - now));
+        const totalDuration = this.warningDuration || 3000;
+        const progress = Math.min(1, elapsedMs / totalDuration);
         
         ctx.save();
         
@@ -1443,89 +1663,120 @@ class Game {
 
     drawCharSelectScreen() {
         const ctx = this.ctx;
-        // タイトル画面を背景に少し暗く
-        this.drawTitleScreen();
-        ctx.fillStyle = 'rgba(0,0,0,0.7)';
+        ctx.fillStyle = '#0a0a1a';
         ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-        const modalW = 340, modalH = 500;
-        const modalX = CANVAS_WIDTH / 2 - modalW / 2;
-        const modalY = CANVAS_HEIGHT / 2 - modalH / 2;
-
-        ctx.fillStyle = '#222';
-        ctx.strokeStyle = '#ff9800';
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.roundRect(modalX, modalY, modalW, modalH, 20);
-        ctx.fill();
-        ctx.stroke();
-
-        ctx.fillStyle = '#fff';
+        // タイトル
+        ctx.fillStyle = '#4fc3f7';
         ctx.font = 'bold 22px "Segoe UI"';
         ctx.textAlign = 'center';
-        ctx.fillText('キャラクター選択', CANVAS_WIDTH / 2, modalY + 40);
+        ctx.fillText('CHARACTER SELECT', CANVAS_WIDTH / 2, 50);
 
-        // ヤスのアイコン
-        const iconSize = 120;
-        const iconX = CANVAS_WIDTH / 2 - iconSize / 2;
-        const iconY = modalY + 70;
-        if (this.yasuImage.complete) {
-            ctx.drawImage(this.yasuImage, iconX, iconY, iconSize, iconSize);
+        // 下線
+        ctx.strokeStyle = '#4fc3f7';
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(CANVAS_WIDTH / 2 - 120, 58); ctx.lineTo(CANVAS_WIDTH / 2 + 120, 58); ctx.stroke();
+
+        const chara = CHARACTERS[this.selectedCharIndex];
+        const cx = CANVAS_WIDTH / 2;
+        const cy = CANVAS_HEIGHT / 2 - 20;
+
+        // キャラカード背景
+        ctx.save();
+        ctx.fillStyle = chara.color + '22';
+        ctx.strokeStyle = chara.color + 'aa';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        if (ctx.roundRect) { ctx.roundRect(cx - 110, cy - 100, 220, 200, 12); }
+        else { ctx.rect(cx - 110, cy - 100, 220, 200); }
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+
+        // バッジ（大きなアイコン）
+        ctx.font = '64px serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(chara.badge, cx, cy - 30);
+
+        // キャラ名
+        ctx.fillStyle = chara.color;
+        ctx.font = 'bold 18px "Segoe UI"';
+        ctx.textBaseline = 'alphabetic';
+        ctx.fillText(chara.name, cx, cy + 50);
+
+        // 説明
+        ctx.fillStyle = '#bbb';
+        ctx.font = '13px "Segoe UI"';
+        ctx.fillText(chara.desc, cx, cy + 72);
+
+        // ステータスバー
+        const barY = cy + 90;
+        const statLabels = [['ATK', chara.attack, 20, '#ff6b6b'], ['SPD', chara.speed, 15, '#4fc3f7'], ['DEF', chara.defense / 5, 30, '#69f0ae']];
+        ctx.textAlign = 'left';
+        ctx.font = 'bold 11px "Segoe UI"';
+        for (let i = 0; i < statLabels.length; i++) {
+            const [label, val, maxVal, barColor] = statLabels[i];
+            const bx = cx - 90;
+            const by = barY + i * 20;
+            ctx.fillStyle = '#888';
+            ctx.fillText(label, bx, by + 9);
+            ctx.fillStyle = '#333';
+            ctx.fillRect(bx + 30, by, 120, 10);
+            ctx.fillStyle = barColor;
+            ctx.fillRect(bx + 30, by, Math.min(120, 120 * (val / maxVal)), 10);
         }
-        
-        ctx.fillStyle = '#ffeb3b';
-        ctx.font = 'bold 20px "Segoe UI"';
-        ctx.fillText('熱血ルーキー ヤス', CANVAS_WIDTH / 2, iconY + iconSize + 30);
 
-        // ステータス表示
-        const stats = [
-            { label: 'Level', value: '1' },
-            { label: '攻撃力', value: '10' },
-            { label: 'スピード', value: '1.0' },
-            { label: '防御力', value: '100' }
-        ];
+        // 左矢印ボタン
+        ctx.fillStyle = 'rgba(255,255,255,0.12)';
+        ctx.beginPath(); ctx.arc(35, cy, 28, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 22px serif';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('◀', 35, cy);
 
-        stats.forEach((stat, i) => {
-            const sy = iconY + iconSize + 70 + i * 35;
-            ctx.fillStyle = '#aaa';
-            ctx.font = '16px "Segoe UI"';
-            ctx.textAlign = 'left';
-            ctx.fillText(stat.label, modalX + 40, sy);
-            ctx.fillStyle = '#fff';
-            ctx.textAlign = 'right';
-            ctx.fillText(stat.value, modalX + modalW - 40, sy);
-        });
+        // 右矢印ボタン
+        ctx.fillStyle = 'rgba(255,255,255,0.12)';
+        ctx.beginPath(); ctx.arc(CANVAS_WIDTH - 35, cy, 28, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.fillText('▶', CANVAS_WIDTH - 35, cy);
+
+        // ドットインジケーター
+        for (let i = 0; i < CHARACTERS.length; i++) {
+            ctx.fillStyle = i === this.selectedCharIndex ? chara.color : '#444';
+            ctx.beginPath(); ctx.arc(cx - (CHARACTERS.length - 1) * 8 + i * 16, cy + 165, 5, 0, Math.PI * 2); ctx.fill();
+        }
 
         // 選択ボタン
-        const btnW = 120, btnH = 45;
-        const btnX = CANVAS_WIDTH / 2 - btnW / 2;
-        const btnY = modalY + modalH - 70;
-        ctx.fillStyle = this.yasuImage.complete ? '#4caf50' : '#888';
-        ctx.beginPath();
-        ctx.roundRect(btnX, btnY, btnW, btnH, 10);
-        ctx.fill();
-        ctx.fillStyle = '#fff';
-        ctx.font = 'bold 18px "Segoe UI"';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(this.yasuImage.complete ? '選択' : 'Loading...', CANVAS_WIDTH / 2, btnY + btnH / 2);
-        ctx.textBaseline = 'alphabetic';
+        const btnX = cx - 120; const btnY = CANVAS_HEIGHT / 2 + 155;
+        const btnGrad = ctx.createLinearGradient(btnX, btnY, btnX, btnY + 60);
+        btnGrad.addColorStop(0, chara.color);
+        btnGrad.addColorStop(1, chara.color + '99');
+        ctx.fillStyle = btnGrad;
+        if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(btnX, btnY, 240, 60, 12); ctx.fill(); }
+        else { ctx.fillRect(btnX, btnY, 240, 60); }
+        ctx.fillStyle = '#000';
+        ctx.font = 'bold 20px "Segoe UI"';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('このキャラで出撃！', cx, btnY + 30);
 
-        // プロショップボタン (右上へ移動)
+        // Proショップボタン
         const shopBtnW = 140, shopBtnH = 40;
         const shopBtnX = CANVAS_WIDTH - shopBtnW - 15;
-        const shopBtnY = 15;
-        ctx.fillStyle = '#ff9800';
+        const shopBtnY = 10;
+        ctx.fillStyle = 'rgba(255, 200, 0, 0.15)';
+        ctx.strokeStyle = '#ffca28';
+        ctx.lineWidth = 1.5;
         ctx.beginPath();
-        ctx.roundRect(shopBtnX, shopBtnY, shopBtnW, shopBtnH, 10);
-        ctx.fill();
-        ctx.fillStyle = '#fff';
-        ctx.font = 'bold 16px "Segoe UI"';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('🛒 プロショップ', shopBtnX + shopBtnW / 2, shopBtnY + shopBtnH / 2);
-        ctx.textBaseline = 'alphabetic';
+        if (ctx.roundRect) { ctx.roundRect(shopBtnX, shopBtnY, shopBtnW, shopBtnH, 6); }
+        else { ctx.rect(shopBtnX, shopBtnY, shopBtnW, shopBtnH); }
+        ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#ffca28';
+        ctx.font = 'bold 15px "Segoe UI"';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('🛠 Pro Shop', shopBtnX + shopBtnW / 2, shopBtnY + shopBtnH / 2);
     }
+
 
     drawShopScreen() {
         const ctx = this.ctx;
