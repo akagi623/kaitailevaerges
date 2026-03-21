@@ -133,7 +133,7 @@ class Game {
         this.warningStartTime = 0;
         this.warningActive = false;
         this.warningShown = false;
-        this.warningDuration = 1500;
+        this.warningDuration = 1000;
         this.isBossIntro = false;
     }
 
@@ -357,7 +357,7 @@ class Game {
     }
 
     update(deltaTime) {
-        if (!this.gameStarted || this.gameOver || this.gameWin || Date.now() < this.entranceEndTime) return;
+        if (!this.gameStarted || this.gameOver || this.gameWin || this.paused || this.warningActive || Date.now() < this.entranceEndTime) return;
         
         // チュートリアル初回表示
         if (!this.hasShownIntro) {
@@ -953,8 +953,8 @@ class Game {
         const now = Date.now();
         const elapsedMs = this.warningActive
             ? (now - this.warningStartTime)
-            : (3000 - Math.max(0, this.entranceEndTime - now));
-        const totalDuration = this.warningDuration || 1500;
+            : (1000 - Math.max(0, this.entranceEndTime - now));
+        const totalDuration = this.warningDuration || 1000;
         const progress = Math.min(1, elapsedMs / totalDuration);
         
         ctx.save();
