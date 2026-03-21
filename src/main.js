@@ -357,6 +357,11 @@ class Game {
     }
 
     update(deltaTime) {
+        // WARNINGエフェクト終了チェック (ガードの外に出しておくことでデッドロックを回避)
+        if (this.warningActive && Date.now() - this.warningStartTime > this.warningDuration) {
+            this.warningActive = false;
+        }
+
         if (!this.gameStarted || this.gameOver || this.gameWin || this.paused || this.warningActive || Date.now() < this.entranceEndTime) return;
         
         // チュートリアル初回表示
@@ -384,12 +389,14 @@ class Game {
                 }
             },
             (brick) => {
-                // コアブロック出現: WARNINGエフェクトをトリガー
+                // コアブロック出現: WARNINGエフェクトを無効化中
+                /*
                 if (!this.warningShown) {
                     this.warningShown = true;
                     this.warningActive = true;
                     this.warningStartTime = Date.now();
                 }
+                */
                 if (!this.hasShownIssue) {
                     this.hasShownIssue = true;
                     setTimeout(() => { this.showTutorial(3.1, brick); }, this.warningDuration);
@@ -397,10 +404,12 @@ class Game {
             }
         );
 
-        // WARNINGエフェクト終了チェック
+        /* 
+        // WARNINGエフェクト終了チェック (上部に移動済み)
         if (this.warningActive && Date.now() - this.warningStartTime > this.warningDuration) {
             this.warningActive = false;
         }
+        */
         
         // アクティブエフェクトタイマー管理
         for (const key of Object.keys(this.activeEffects)) {
@@ -695,11 +704,13 @@ class Game {
             return;
         }
 
+        /*
         // コアブロック出現WARNING
         if (this.warningActive) {
             this.drawBossWarning();
             return;
         }
+        */
 
         // チュートリアル画面
         if (this.tutorialState > 0) {
