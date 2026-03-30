@@ -387,6 +387,8 @@ class Game {
                     this.hasShownRespawn = true;
                     this.showTutorial(2.1, brick);
                 }
+                // 復活エフェクトの生成
+                this.effectManager.createSpawnEffect(brick.x + brick.width / 2, brick.y + brick.height / 2);
             },
             (brick) => {
                 // コアブロック出現: WARNINGエフェクトを無効化中
@@ -401,6 +403,8 @@ class Game {
                     this.hasShownIssue = true;
                     setTimeout(() => { this.showTutorial(3.1, brick); }, this.warningDuration);
                 }
+                // 復活（ボスターゲット化）エフェクトの生成
+                this.effectManager.createSpawnEffect(brick.x + brick.width / 2, brick.y + brick.height / 2);
             }
         );
 

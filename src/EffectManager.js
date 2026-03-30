@@ -40,6 +40,54 @@ class Laser {
     }
 }
 
+class SpawnEffect {
+    constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.radius = 5;
+        this.maxRadius = 60;
+        this.life = 1.0;
+        this.decay = 0.04; // 約0.4秒
+        this.active = true;
+    }
+
+    update() {
+        this.life -= this.decay;
+        this.radius += (this.maxRadius - this.radius) * 0.15;
+        if (this.life <= 0) {
+            this.life = 0;
+            this.active = false;
+        }
+    }
+
+    draw(ctx) {
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        
+        const alpha = Math.pow(this.life, 2); // 2乗にすることでフェードアウトを滑らかに
+        
+        // メインの塗りつぶし円（ボヤけた光）
+        const gradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.radius);
+        gradient.addColorStop(0, `rgba(255, 255, 255, ${alpha})`);
+        gradient.addColorStop(0.3, `rgba(0, 255, 255, ${alpha * 0.7})`);
+        gradient.addColorStop(1, 'transparent');
+        
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 輪郭部分（線が外へ広がる感じ）
+        ctx.strokeStyle = `rgba(180, 255, 255, ${alpha * 0.5})`;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius * 0.8, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.restore();
+    }
+}
+
 class DamageText {
     constructor(x, y, text, comboCount = 0) {
         this.x = x;
@@ -82,6 +130,7 @@ export class EffectManager {
         this.particles = [];
         this.texts = [];
         this.lasers = [];
+        this.spawnEffects = [];
     }
 
     createExplosion(x, y, count = 15) { 
@@ -111,6 +160,10 @@ export class EffectManager {
         this.lasers.push(new Laser(x, width, startY));
     }
 
+    createSpawnEffect(x, y) {
+        this.spawnEffects.push(new SpawnEffect(x, y));
+    }
+
     update() {
         // パーティクルの更新
         for (let i = this.particles.length - 1; i >= 0; i--) {
@@ -127,11 +180,16 @@ export class EffectManager {
         // レーザーの更新
         this.lasers = this.lasers.filter(l => l.active);
         this.lasers.forEach(l => l.update());
+
+        // スポーンエフェクトの更新
+        this.spawnEffects = this.spawnEffects.filter(s => s.active);
+        this.spawnEffects.forEach(s => s.update());
     }
 
     draw(ctx) {
         this.particles.forEach(p => p.draw(ctx));
         this.texts.forEach(t => t.draw(ctx));
         this.lasers.forEach(l => l.draw(ctx));
+        this.spawnEffects.forEach(s => s.draw(ctx));
     }
 }
