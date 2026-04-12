@@ -1485,7 +1485,7 @@ class Game {
         const source = this.audioCtx.createBufferSource();
         source.buffer = this.hitSEBuffer;
         const gainNode = this.audioCtx.createGain();
-        gainNode.gain.value = 1.0; // 倍音量
+        gainNode.gain.value = 2.0; // さらに倍音量
         source.connect(gainNode);
         gainNode.connect(this.masterGain || this.audioCtx.destination);
         source.onended = () => {
