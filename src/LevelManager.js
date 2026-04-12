@@ -1,7 +1,7 @@
 import { 
     BRICK_ROWS, BRICK_COLS, BRICK_WIDTH, BRICK_HEIGHT, 
     BRICK_PADDING, BRICK_OFFSET_TOP, BRICK_OFFSET_LEFT, ISSUE_BRICK_HP,
-    STAGE_CONFIG
+    STAGE_CONFIG, STAGE_ID
 } from './Constants.js';
 import { Brick } from './Brick.js';
 
