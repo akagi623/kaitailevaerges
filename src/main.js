@@ -209,6 +209,13 @@ class Game {
                 if (canvasX > btnX - 50 && canvasX < btnX + btnW + 50 && canvasY > s3Y && canvasY < s3Y + btnH) {
                     this.startGame(STAGE_ID.SHINJUKU);
                 }
+                // 戻るボタン
+                const backW = 140, backH = 45;
+                const backX = CANVAS_WIDTH / 2 - backW / 2;
+                const backY = CANVAS_HEIGHT - 70;
+                if (canvasX > backX && canvasX < backX + backW && canvasY > backY && canvasY < backY + backH) {
+                    this.gameState = GAME_STATE.CHAR_SELECT;
+                }
             } else if (this.gameState === GAME_STATE.PLAYING) {
                 if (this.paused) {
                     this.handlePauseTouch(canvasX, canvasY);
@@ -318,7 +325,7 @@ class Game {
             const loadSE = (path) => fetch(path)
                 .then(r => r.arrayBuffer())
                 .then(buf => this.audioCtx.decodeAudioData(buf));
-            loadSE('soundeffect/cracker_3.mp3').then(b => { this.hitSEBuffer = b; }).catch(e => console.error('Hit SE load failed:', e));
+            loadSE('soundeffect/robot_hit.mp3').then(b => { this.hitSEBuffer = b; }).catch(e => console.error('Hit SE load failed:', e));
             loadSE('soundeffect/winse.mp3').then(b => { this.winSEBuffer = b; }).catch(e => console.error('Win SE load failed:', e));
             loadSE('soundeffect/losese.mp3').then(b => { this.loseSEBuffer = b; }).catch(e => console.error('Lose SE load failed:', e));
             loadSE('soundeffect/laser.mp3').then(b => { this.laserSEBuffer = b; }).catch(e => console.error('Laser SE load failed:', e));
@@ -2252,6 +2259,26 @@ class Game {
             ctx.textAlign = 'center';
             ctx.fillText('Coming Soon...', CANVAS_WIDTH / 2, sy + 48);
         }
+
+        // 戻るボタン
+        const backW = 140, backH = 45;
+        const backX = CANVAS_WIDTH / 2 - backW / 2;
+        const backY = CANVAS_HEIGHT - 70;
+
+        ctx.fillStyle = '#444';
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.roundRect(backX, backY, backW, backH, 10);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 18px "Segoe UI"';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('戻る', CANVAS_WIDTH / 2, backY + backH / 2);
+        ctx.textBaseline = 'alphabetic'; // リセット
     }
 }
 
