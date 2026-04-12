@@ -607,6 +607,9 @@ class Game {
             this.ctx.fillStyle = '#111';
             this.ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
+            // 8角形グリッドの描画（背面に敷き詰める）
+            this.drawBackgroundGrid();
+
             // 必殺技ゲージ（パドルより先に描画して後支になるように）
             this.drawSpecialGauge();
 
@@ -621,6 +624,40 @@ class Game {
             // UI描画
             this.drawUI();
         }
+    }
+
+    drawBackgroundGrid() {
+        const ctx = this.ctx;
+        const size = 60; // マスのサイズ
+        const offset = size * 0.25; // 8角形の角のカット量
+        const color = 'rgba(0, 255, 255, 0.07)'; // 非常に薄いシアン（Gジェネタクティカル風）
+
+        ctx.save();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1;
+
+        for (let y = -size / 2; y < CANVAS_HEIGHT + size; y += size) {
+            for (let x = -size / 2; x < CANVAS_WIDTH + size; x += size) {
+                ctx.beginPath();
+                ctx.moveTo(x + offset, y);
+                ctx.lineTo(x + size - offset, y);
+                ctx.lineTo(x + size, y + offset);
+                ctx.lineTo(x + size, y + size - offset);
+                ctx.lineTo(x + size - offset, y + size);
+                ctx.lineTo(x + offset, y + size);
+                ctx.lineTo(x, y + size - offset);
+                ctx.lineTo(x, y + offset);
+                ctx.closePath();
+                ctx.stroke();
+
+                // センターにドットを打つとよりタクティカル感が出る
+                ctx.fillStyle = color;
+                ctx.beginPath();
+                ctx.arc(x + size / 2, y + size / 2, 1, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+        ctx.restore();
     }
 
     formatScore(score) {
