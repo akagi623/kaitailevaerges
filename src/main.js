@@ -49,6 +49,16 @@ class Game {
         this.oyakataImage = new Image();
         this.oyakataImage.src = 'chara_2_icon.webp';
 
+        // ステージ背景画像の読み込み
+        this.stageBgImages = {
+            [STAGE_ID.IKEBUKURO]: new Image(),
+            [STAGE_ID.SHIBUYA]: new Image(),
+            [STAGE_ID.SHINJUKU]: new Image()
+        };
+        this.stageBgImages[STAGE_ID.IKEBUKURO].src = 'ikebukuro.webp';
+        this.stageBgImages[STAGE_ID.SHIBUYA].src = 'shibuya.webp';
+        this.stageBgImages[STAGE_ID.SHINJUKU].src = 'shinjuku.webp';
+
         // BGMの設定
         this.bgm = new Audio('BURNING ADRENALINE.mp3');
         this.bgm.loop = true;
@@ -603,9 +613,20 @@ class Game {
         } else if (this.gameState === GAME_STATE.SHOP) {
             this.drawShopScreen();
         } else {
-            // 背景
+            // 背景（ベース）
             this.ctx.fillStyle = '#111';
             this.ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+            // ステージ背景画像
+            const currentStageId = this.levelManager ? this.levelManager.currentStageId : null;
+            if (currentStageId && this.stageBgImages[currentStageId] && this.stageBgImages[currentStageId].complete) {
+                // 最背面に画像を描画
+                this.ctx.drawImage(this.stageBgImages[currentStageId], 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+                
+                // ゲームプレイの視認性を確保するため、半透明の黒を重ねる
+                this.ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
+                this.ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+            }
 
             // 8角形グリッドの描画（背面に敷き詰める）
             this.drawBackgroundGrid();
