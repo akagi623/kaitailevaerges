@@ -1563,27 +1563,27 @@ class Game {
         if (this.tutorialState === 1.1) {
             textLines = [
                 "おう新人！",
-                "ブロックはHPがゼロになれば壊れるぞ！",
+                "機械はHPがゼロになれば壊れるぞ！",
                 "連続で当て続ければ【LEVERAGE】が効いて",
                 "ダメージが1.5倍ずつ倍増だ！"
             ];
         } else if (this.tutorialState === 1.2) {
             textLines = [
-                "ブロックを壊せば【経験値】が貯まる。",
+                "機械を壊せば【経験値】が貯まる。",
                 "満タンになったら、下の【FIRE!】を",
                 "タップして必殺技をブチかませ！"
             ];
         } else if (this.tutorialState === 2.1) {
             textLines = [
                 "おっと、油断するなよ！",
-                "この現場のブロックは、壊しても",
+                "この現場の機械は、壊しても",
                 "時間が経てば【復活】しちまうぞ！",
                 "早えとこカタをつけねぇとな！"
             ];
         } else if (this.tutorialState === 3.1) {
             textLines = [
                 "出たな！あいつが今回のデカブツ…",
-                "【コアブロック】だ！",
+                "【コアマシン】だ！",
                 "普通の攻撃じゃ1ダメージしか通らねぇし、",
                 "必殺技も弾かれちまう！"
             ];
@@ -1636,7 +1636,7 @@ class Game {
         // 項目
         const stats = [
             { label: 'SCORE', value: this.formatScore(this.score) },
-            { label: 'BLOCKS DESTROYED', value: this.destroyedBricksCount },
+            { label: 'MACHINES DESTROYED', value: this.destroyedBricksCount },
             { label: 'CLEAR BONUS', value: `¥${this.clearBonus.toLocaleString()}`, color: '#ffeb3b' },
             { label: 'TOTAL MONEY', value: `¥${this.player.money.toLocaleString()}`, color: '#ffdf00' }
         ];

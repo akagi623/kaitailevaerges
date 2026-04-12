@@ -135,7 +135,7 @@ export class Brick {
         
         // HPの表示 (デザインを邪魔しないよう真ん中より下に配置し、点滅もやめる)
         ctx.save();
-        const text = this.isIssue ? `CORE HP: ${this.hp}` : this.hp.toString();
+        const text = this.isIssue ? `CORE MACHINE HP: ${this.hp}` : this.hp.toString();
         ctx.font = this.isIssue ? 'bold 12px "Segoe UI"' : 'bold 15px "Segoe UI"';
         const textMetrics = ctx.measureText(text);
         const textWidth = textMetrics.width;
