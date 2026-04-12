@@ -1815,12 +1815,18 @@ class Game {
         ctx.fillStyle = chara.color;
         ctx.font = 'bold 18px "Segoe UI"';
         ctx.textBaseline = 'alphabetic';
-        ctx.fillText(chara.name, cx, cy + 50);
+        ctx.fillText(chara.name, cx, cy + 50, 200); // 枠に収まるようmaxWidth 200 指定
 
-        // 説明
+        // 説明（2行に分割表示対応）
         ctx.fillStyle = '#bbb';
-        ctx.font = '13px "Segoe UI"';
-        ctx.fillText(chara.desc, cx, cy + 72);
+        ctx.font = '12px "Segoe UI"';
+        const descParts = chara.desc.split('。');
+        if (descParts.length > 1 && descParts[1].trim() !== '') {
+            ctx.fillText(descParts[0] + '。', cx, cy + 68, 200);
+            ctx.fillText(descParts[1].trim(), cx, cy + 82, 200);
+        } else {
+            ctx.fillText(chara.desc, cx, cy + 72, 200);
+        }
 
         // ステータスバー
         const barY = cy + 90;
@@ -1926,15 +1932,23 @@ class Game {
             // アイコン描画
             this.drawEquipmentIcon(item.id, itemX + 50, itemY + 50, item.color);
 
-            // テキスト
+            // テキスト（ボタンと被らないようMaxWidthを設ける）
             ctx.textAlign = 'left';
             ctx.fillStyle = '#fff';
-            ctx.font = 'bold 20px "Segoe UI"';
-            ctx.fillText(item.name, itemX + 100, itemY + 35);
+            ctx.font = 'bold 18px "Segoe UI"';
+            ctx.fillText(item.name, itemX + 90, itemY + 35, 180);
 
             ctx.fillStyle = '#aaa';
-            ctx.font = '14px "Segoe UI"';
-            ctx.fillText(item.description, itemX + 100, itemY + 60);
+            ctx.font = '12px "Segoe UI"';
+            
+            // 説明文を。で区切って2行にする
+            const itemDescParts = item.description.split('。');
+            if (itemDescParts.length > 1 && itemDescParts[1].trim() !== '') {
+                ctx.fillText(itemDescParts[0] + '。', itemX + 90, itemY + 58, 190);
+                ctx.fillText(itemDescParts[1].trim(), itemX + 90, itemY + 76, 190);
+            } else {
+                ctx.fillText(item.description, itemX + 90, itemY + 60, 190);
+            }
 
             // 購入・装備ボタン
             const btnW = 100, btnH = 40;
