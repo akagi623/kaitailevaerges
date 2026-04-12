@@ -75,34 +75,34 @@ export const STAGE_CONFIG = {
 export const EQUIPMENT_DATA = [
     {
         id: 'crowbar',
-        name: 'バール',
-        description: '基本の解体道具。攻撃力+5',
+        name: 'プラズマトーチ',
+        description: '高圧縮プラズマで装甲を溶断する基本ツール。攻撃力+5',
         price: 300,
         attackBoost: 5,
-        color: '#90a4ae'
+        color: '#00e5ff'
     },
     {
         id: 'hammer',
-        name: 'ハンマー',
-        description: '重厚な一撃。攻撃力+15',
+        name: '重力パイルバンカー',
+        description: '局所的な重力場を発生させ、質量兵器を打ち込む。攻撃力+15',
         price: 1000,
         attackBoost: 15,
-        color: '#795548'
-    },
-    {
-        id: 'sabersaw',
-        name: 'セーバーソー',
-        description: '電動の切れ味。攻撃力+40',
-        price: 3500,
-        attackBoost: 40,
         color: '#ff5722'
     },
     {
+        id: 'sabersaw',
+        name: '高周波チェーンブレード',
+        description: '分子結合を断ち切る超振動ブレード。攻撃力+40',
+        price: 3500,
+        attackBoost: 40,
+        color: '#e040fb'
+    },
+    {
         id: 'excavator',
-        name: 'ショベルカー',
-        description: '重機は全てを破壊する。攻撃力+100',
+        name: '解体メック『タイタン』',
+        description: '規格外の出力を誇る対巨大建造物用の搭乗兵器。攻撃力+100',
         price: 15000,
         attackBoost: 100,
-        color: '#ffc107'
+        color: '#ffca28'
     }
 ];

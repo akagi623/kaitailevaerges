@@ -2046,72 +2046,119 @@ class Game {
         ctx.lineJoin = 'round';
 
         if (id === 'crowbar') {
-            // バール
+            // プラズマトーチ
             ctx.beginPath();
-            ctx.moveTo(-15, 20);
-            ctx.lineTo(15, -15);
-            ctx.quadraticCurveTo(20, -20, 25, -15); // フック部分
-            ctx.stroke();
-            // 先端の割れ目イメージ
-            ctx.beginPath();
-            ctx.moveTo(-15, 20);
-            ctx.lineTo(-18, 25);
-            ctx.moveTo(-15, 20);
-            ctx.lineTo(-12, 25);
-            ctx.stroke();
-        } else if (id === 'hammer') {
-            // ハンマー
-            ctx.beginPath();
-            ctx.fillStyle = '#888';
-            ctx.roundRect(-20, -15, 40, 20, 3);
+            ctx.fillStyle = '#333';
+            ctx.roundRect(-5, -5, 10, 25, 2); // グリップ
             ctx.fill();
             ctx.beginPath();
-            ctx.strokeStyle = '#795548';
-            ctx.lineWidth = 6;
-            ctx.moveTo(0, 5);
-            ctx.lineTo(0, 25);
+            ctx.fillStyle = '#666';
+            ctx.roundRect(-8, -15, 16, 10, 2); // 射出口のベース
+            ctx.fill();
+            
+            // プラズマの刃
+            ctx.beginPath();
+            ctx.fillStyle = color;
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = color;
+            ctx.moveTo(-4, -15);
+            ctx.lineTo(0, -35);
+            ctx.lineTo(4, -15);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+        } else if (id === 'hammer') {
+            // 重力パイルバンカー
+            ctx.beginPath();
+            ctx.fillStyle = '#444';
+            ctx.roundRect(-15, -5, 30, 20, 4); // ベースシリンダー
+            ctx.fill();
+            ctx.beginPath();
+            ctx.fillStyle = '#777';
+            ctx.fillRect(-10, -15, 20, 10); // 上部メカ
+            ctx.fill();
+            
+            // 杭（パイル）
+            ctx.beginPath();
+            ctx.fillStyle = '#aaa';
+            ctx.moveTo(-4, 15);
+            ctx.lineTo(0, 35);
+            ctx.lineTo(4, 15);
+            ctx.fill();
+            
+            // 重力リングのエフェクト
+            ctx.beginPath();
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2;
+            ctx.ellipse(0, 5, 20, 6, 0, 0, Math.PI * 2);
             ctx.stroke();
         } else if (id === 'sabersaw') {
-            // セーバーソー
+            // 高周波チェーンブレード
             ctx.beginPath();
-            ctx.fillStyle = '#ff5722';
-            ctx.roundRect(-20, -5, 30, 25, 5);
+            ctx.fillStyle = '#222';
+            ctx.roundRect(-6, 10, 12, 15, 3); // 持ち手
             ctx.fill();
             ctx.beginPath();
-            ctx.strokeStyle = '#ddd';
-            ctx.lineWidth = 4;
-            ctx.moveTo(10, 5);
-            ctx.lineTo(30, 5);
-            ctx.stroke();
-            // 持ち手
+            ctx.fillStyle = '#555';
+            ctx.roundRect(-12, 5, 24, 6, 2); // ガード
+            ctx.fill();
+            
+            // ブレード部分
             ctx.beginPath();
-            ctx.strokeStyle = '#444';
-            ctx.lineWidth = 4;
-            ctx.moveTo(-15, 15);
-            ctx.lineTo(-25, 25);
+            ctx.fillStyle = '#000';
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 3;
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = color;
+            ctx.roundRect(-8, -35, 16, 40, 3);
+            ctx.fill();
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+            
+            // 内部のギザギザ（高周波波形）
+            ctx.beginPath();
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 1;
+            ctx.moveTo(-4, -30);
+            ctx.lineTo(4, -25);
+            ctx.lineTo(-4, -20);
+            ctx.lineTo(4, -15);
+            ctx.lineTo(-4, -10);
+            ctx.lineTo(4, -5);
+            ctx.lineTo(-4, 0);
             ctx.stroke();
         } else if (id === 'excavator') {
-            // ショベルカー（簡易）
+            // 解体メック『タイタン』 (シルエット風)
             ctx.beginPath();
-            ctx.fillStyle = '#ffc107';
-            ctx.roundRect(-20, 5, 30, 20, 3); // ボディ
+            ctx.fillStyle = '#333';
+            ctx.roundRect(-15, -15, 30, 25, 5); // 胴体
             ctx.fill();
             ctx.beginPath();
-            ctx.strokeStyle = '#ffc107';
-            ctx.lineWidth = 5;
-            ctx.moveTo(0, 5);
-            ctx.lineTo(10, -10); // アーム1
-            ctx.lineTo(30, 0);   // アーム2
-            ctx.stroke();
-            // バケット
+            ctx.fillStyle = '#222';
+            ctx.arc(0, -5, 8, 0, Math.PI, true); // コックピット（ガラス）
+            ctx.fill();
+            
+            // メインアイ（光）
+            ctx.fillStyle = color;
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = color;
+            ctx.fillRect(-6, -8, 12, 3);
+            ctx.shadowBlur = 0;
+            
+            // 腕（デカいアーム）
+            ctx.fillStyle = '#555';
             ctx.beginPath();
-            ctx.moveTo(30, 0);
-            ctx.lineTo(35, 10);
-            ctx.lineTo(25, 15);
-            ctx.stroke();
-            // キャタピラ
-            ctx.fillStyle = '#333';
-            ctx.fillRect(-22, 22, 34, 6);
+            ctx.roundRect(-25, -10, 10, 30, 3); // 左腕
+            ctx.roundRect(15, -10, 10, 30, 3); // 右腕
+            ctx.fill();
+            
+            // 足
+            ctx.fillStyle = '#444';
+            ctx.beginPath();
+            ctx.moveTo(-10, 10); ctx.lineTo(-15, 30); ctx.lineTo(-5, 30); ctx.lineTo(-5, 10);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.moveTo(10, 10); ctx.lineTo(15, 30); ctx.lineTo(5, 30); ctx.lineTo(5, 10);
+            ctx.fill();
         }
         ctx.restore();
     }
