@@ -197,7 +197,7 @@ class Game {
                 const s3Y = 350;
                 // クリック判定を少し広くする (450まで許容)
                 if (canvasX > btnX - 50 && canvasX < btnX + btnW + 50 && canvasY > s3Y && canvasY < s3Y + btnH) {
-                    this.startGame(STAGE_ID.BOSS);
+                    this.startGame(STAGE_ID.SHINJUKU);
                 }
             } else if (this.gameState === GAME_STATE.PLAYING) {
                 if (this.paused) {
@@ -2101,11 +2101,11 @@ class Game {
         ctx.fillStyle = '#aaa';
         ctx.fillText('難易度: ★★☆☆☆', s1X + 20, s2Y + 60);
 
-        // Stage 3: BOSS
+        // Stage 3: 新宿
         const s3Y = 350;
         const s3W = 350, s3H = 80;
-        ctx.fillStyle = 'rgba(244, 67, 54, 0.2)';
-        ctx.strokeStyle = '#f44336';
+        ctx.fillStyle = 'rgba(156, 39, 176, 0.2)'; // 紫系ネオン
+        ctx.strokeStyle = '#9c27b0';
         ctx.beginPath();
         ctx.roundRect(s1X, s3Y, s3W, s3H, 10);
         ctx.fill();
@@ -2113,10 +2113,10 @@ class Game {
 
         ctx.fillStyle = '#fff';
         ctx.font = 'bold 22px "Segoe UI"';
-        ctx.fillText('Stage 3: BOSS', s1X + 20, s3Y + 35);
+        ctx.fillText('Stage 3: 新宿', s1X + 20, s3Y + 35);
         ctx.font = '14px "Segoe UI"';
-        ctx.fillStyle = '#f44336';
-        ctx.fillText('難易度: ★★★★★ (DANGER)', s1X + 20, s3Y + 60);
+        ctx.fillStyle = '#aaa';
+        ctx.fillText('難易度: ★★★☆☆', s1X + 20, s3Y + 60);
 
         // Coming Soon (Stage 4以降)
         for (let i = 3; i <= 4; i++) {

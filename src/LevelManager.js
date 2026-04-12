@@ -41,8 +41,8 @@ export class LevelManager {
                 const isEdge = isEdgeLeft || isEdgeRight;
                 
                 let isCenterTarget = false;
-                if (stageId === 'boss') {
-                    // ボス：巨大なコアを中心とした要塞配置
+                if (stageId === STAGE_ID.SHINJUKU) {
+                    // 新宿（旧ボス配置）：巨大なコアを中心とした要塞配置
                     isCenterTarget = (r >= 1 && r <= 4 && c >= 1 && c <= 4);
                 } else if (isShibuya) {
                     // 渋谷：スクランブル配置（市松模様的な難しさ）
