@@ -8,12 +8,23 @@ export class Boss {
         this.height = BOSS_CONFIG.HEIGHT;
         this.hp = BOSS_CONFIG.HP;
         this.maxHp = BOSS_CONFIG.HP;
-        this.image = image;
+        this.rawImage = image;
+        this.processedImage = null;
         this.active = true;
+        this.isSpriteProcessed = false;
         
         this.invincibilityTimer = 0;
         this.moveTimer = 0;
         this.blockTimer = 0;
+
+        // 背景透過処理
+        if (image) {
+            if (image.complete) {
+                this.processSprite();
+            } else {
+                image.onload = () => this.processSprite();
+            }
+        }
         
         // 当たり判定の調整（画像の中央付近に合わせる）
         this.collisionBox = {
@@ -28,6 +39,27 @@ export class Boss {
             width: this.width * BOSS_CONFIG.HEAD_WIDTH_RATIO,
             height: this.height * BOSS_CONFIG.HEAD_HEIGHT_RATIO
         };
+    }
+
+    processSprite() {
+        const canvas = document.createElement('canvas');
+        canvas.width = this.rawImage.width;
+        canvas.height = this.rawImage.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(this.rawImage, 0, 0);
+
+        let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        let data = imageData.data;
+        for (let i = 0; i < data.length; i += 4) {
+            // 暗い色（背景の黒）を透明にする
+            if (data[i] < 45 && data[i+1] < 45 && data[i+2] < 45) {
+                data[i+3] = 0;
+            }
+        }
+        ctx.putImageData(imageData, 0, 0);
+        this.processedImage = new Image();
+        this.processedImage.src = canvas.toDataURL();
+        this.isSpriteProcessed = true;
     }
 
     update(deltaTime) {
@@ -56,8 +88,11 @@ export class Boss {
         }
 
         // ボス本体の描画
-        if (this.image && this.image.complete) {
-            ctx.drawImage(this.image, this.x, this.y, this.width, this.height);
+        if (this.isSpriteProcessed && this.processedImage) {
+            ctx.drawImage(this.processedImage, this.x, this.y, this.width, this.height);
+        } else if (this.rawImage && this.rawImage.complete) {
+            // 処理前の画像を表示（フォールバック）
+            ctx.drawImage(this.rawImage, this.x, this.y, this.width, this.height);
         } else {
             // フォールバック
             ctx.fillStyle = '#ff0000';
