@@ -457,14 +457,12 @@ class Game {
             if (collisionResult.isBoss) {
                 // ボスへのヒット
                 if (collisionResult.invincible) {
-                    // 無敵時間中に当たった場合はコンボリセット
+                    // 無敵時間中に当たった場合はコンボリセット（ペナルティ）
                     this.combo = 0;
-                } else if (collisionResult.isWeakPoint) {
-                    // 弱点に当たった場合のみコンボ加算
+                } else {
+                    // ダメージが通った場合のみコンボ加算
                     this.combo++;
                     this.lastCombo = this.combo;
-                } else {
-                    // 体に当たった場合（ダメージ0）はコンボ継続（リセットもしない）
                 }
             } else {
                 this.combo++;
@@ -477,7 +475,7 @@ class Game {
             if (collisionResult.damage > 0 || collisionResult.isBoss) {
                 const targetX = collisionResult.isBoss ? this.ball.x : (collisionResult.brick.x + collisionResult.brick.width / 2);
                 const targetY = collisionResult.isBoss ? this.ball.y : collisionResult.brick.y;
-                const damageText = collisionResult.isBoss && !collisionResult.isWeakPoint ? "BLOCK!" : `-${collisionResult.damage}`;
+                const damageText = (collisionResult.isBoss && collisionResult.invincible) ? 'GUARD!' : `-${collisionResult.damage}`;
                 this.effectManager.createDamageText(targetX, targetY, damageText, this.combo);
             }
 

@@ -83,13 +83,12 @@ export class LevelManager {
                 // 跳ね返り
                 if (bossHit.dx !== 0) ball.dx = -ball.dx;
                 if (bossHit.dy !== 0) ball.dy = -ball.dy;
-                
-                const damaged = this.boss.hit(damage, bossHit.isWeakPoint);
-                return { 
-                    hit: true, 
-                    isBoss: true, 
-                    isWeakPoint: bossHit.isWeakPoint, 
-                    invincible: bossHit.invincible, 
+
+                const damaged = this.boss.hit(damage);
+                return {
+                    hit: true,
+                    isBoss: true,
+                    invincible: bossHit.invincible,
                     damage: damaged ? damage : 0,
                     destroyed: !this.boss.active
                 };
