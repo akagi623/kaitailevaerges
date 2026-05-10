@@ -59,6 +59,9 @@ class Game {
         this.stageBgImages[STAGE_ID.SHIBUYA].src = 'shibuya.webp';
         this.stageBgImages[STAGE_ID.SHINJUKU].src = 'shinjuku.webp';
 
+        this.bossImage = new Image();
+        this.bossImage.src = 'gazou/boss_nihei.png';
+
         // BGMの設定
         this.bgm = new Audio('BURNING ADRENALINE.mp3');
         this.bgm.loop = true;
@@ -353,7 +356,7 @@ class Game {
             this.hasShownRespawn = false;
             this.hasShownIssue = false;
         }
-        this.levelManager.init(stageId);
+        this.levelManager.init(stageId, this.bossImage);
         this.gameState = GAME_STATE.PLAYING;
         this.gameStarted = true;
         this.isBossIntro = false;
@@ -451,17 +454,32 @@ class Game {
         // ブロックとの衝突判定
         const collisionResult = this.levelManager.checkCollision(this.ball, currentDamage);
         if (collisionResult.hit) {
-            this.combo++;
-            this.lastCombo = this.combo; // コンボが続く限り更新
-            this.score += collisionResult.damage; // スコアをダメージ量と同じにする
+            if (collisionResult.isBoss) {
+                // ボスへのヒット
+                if (collisionResult.invincible) {
+                    // 無敵時間中に当たった場合はコンボリセット
+                    this.combo = 0;
+                } else if (collisionResult.isWeakPoint) {
+                    // 弱点に当たった場合のみコンボ加算
+                    this.combo++;
+                    this.lastCombo = this.combo;
+                } else {
+                    // 体に当たった場合（ダメージ0）はコンボ継続（リセットもしない）
+                }
+            } else {
+                this.combo++;
+                this.lastCombo = this.combo;
+            }
             
-            // ダメージテキストの生成（数字のみ、コンボ数に応じてサイズ変更）
-            this.effectManager.createDamageText(
-                collisionResult.brick.x + collisionResult.brick.width / 2, 
-                collisionResult.brick.y, 
-                `-${collisionResult.damage}`, 
-                this.combo
-            );
+            this.score += collisionResult.damage;
+            
+            // ダメージテキストの生成
+            if (collisionResult.damage > 0 || collisionResult.isBoss) {
+                const targetX = collisionResult.isBoss ? this.ball.x : (collisionResult.brick.x + collisionResult.brick.width / 2);
+                const targetY = collisionResult.isBoss ? this.ball.y : collisionResult.brick.y;
+                const damageText = collisionResult.isBoss && !collisionResult.isWeakPoint ? "BLOCK!" : `-${collisionResult.damage}`;
+                this.effectManager.createDamageText(targetX, targetY, damageText, this.combo);
+            }
 
             // 効果音の再生
             this.playHitSE();

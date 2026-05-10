@@ -4,21 +4,34 @@ import {
     STAGE_CONFIG, STAGE_ID
 } from './Constants.js';
 import { Brick } from './Brick.js';
+import { Boss } from './Boss.js';
 
 export class LevelManager {
     constructor() {
         this.bricks = [];
+        this.bossBlocks = []; // ボスが生成するブロック
         this.issueSpawned = false;
         this.currentStageId = null;
+        this.boss = null;
+        this.bossImage = null;
         this.init();
     }
 
-    init(stageId = 'ikebukuro') {
+    init(stageId = 'ikebukuro', bossImage = null) {
         this.bricks = [];
+        this.bossBlocks = [];
         this.issueSpawned = false;
         this.currentStageId = stageId;
+        this.bossImage = bossImage;
+        this.boss = null;
 
         const isShibuya = (stageId === 'shibuya');
+        const isShinjuku = (stageId === STAGE_ID.SHINJUKU);
+
+        if (isShinjuku && bossImage) {
+            this.boss = new Boss((450 - 220) / 2, 100, bossImage);
+            return; // 新宿ステージはボスのみ（最初は）
+        }
 
         for (let r = 0; r < BRICK_ROWS; r++) {
             for (let c = 0; c < BRICK_COLS; c++) {
@@ -63,6 +76,36 @@ export class LevelManager {
     }
 
     checkCollision(ball, damage) {
+        // ボスとの衝突判定を優先
+        if (this.boss && this.boss.active) {
+            const bossHit = this.boss.checkCollision(ball.x, ball.y, ball.radius);
+            if (bossHit) {
+                // 跳ね返り
+                if (bossHit.dx !== 0) ball.dx = -ball.dx;
+                if (bossHit.dy !== 0) ball.dy = -ball.dy;
+                
+                const damaged = this.boss.hit(damage, bossHit.isWeakPoint);
+                return { 
+                    hit: true, 
+                    isBoss: true, 
+                    isWeakPoint: bossHit.isWeakPoint, 
+                    invincible: bossHit.invincible, 
+                    damage: damaged ? damage : 0,
+                    destroyed: !this.boss.active
+                };
+            }
+        }
+
+        // ボスが生成したブロックとの判定
+        for (let i = this.bossBlocks.length - 1; i >= 0; i--) {
+            const brick = this.bossBlocks[i];
+            const collision = this._checkSingleBrickCollision(brick, ball);
+            if (collision) {
+                // ボスブロックは基本壊れない（または高HP）
+                return { hit: true, brick: brick, destroyed: false, damage: 0 };
+            }
+        }
+
         for (let brick of this.bricks) {
             if (brick.active) {
                 // 矩形と円の当たり判定
@@ -90,7 +133,36 @@ export class LevelManager {
         return { hit: false };
     }
 
+    _checkSingleBrickCollision(brick, ball) {
+        const closestX = Math.max(brick.x, Math.min(ball.x, brick.x + brick.width));
+        const closestY = Math.max(brick.y, Math.min(ball.y, brick.y + brick.height));
+        const distanceX = ball.x - closestX;
+        const distanceY = ball.y - closestY;
+        const distanceSquared = (distanceX * distanceX) + (distanceY * distanceY);
+
+        if (distanceSquared < (ball.radius * ball.radius)) {
+            if (Math.abs(distanceX) > Math.abs(distanceY)) {
+                ball.dx = -ball.dx;
+            } else {
+                ball.dy = -ball.dy;
+            }
+            return true;
+        }
+        return false;
+    }
+
     update(deltaTime, onRespawn, onIssueSpawn) {
+        if (this.boss && this.boss.active) {
+            this.boss.update(deltaTime);
+            
+            // ボスのブロック生成ロジック（暫定：5秒おきに周囲に配置）
+            this.boss.blockTimer = (this.boss.blockTimer || 0) + deltaTime;
+            if (this.boss.blockTimer > 5000) {
+                this.boss.blockTimer = 0;
+                this.spawnBossMinions();
+            }
+        }
+
         for (let brick of this.bricks) {
             brick.update(deltaTime, (respawnedBrick) => {
                 let isIssueSpawn = false;
@@ -117,8 +189,36 @@ export class LevelManager {
     }
 
     draw(ctx) {
+        if (this.boss && this.boss.active) {
+            this.boss.draw(ctx);
+        }
+        for (let brick of this.bossBlocks) {
+            brick.draw(ctx);
+        }
         for (let brick of this.bricks) {
             brick.draw(ctx);
+        }
+    }
+
+    spawnBossMinions() {
+        if (!this.boss) return;
+        // 既存のボスブロックを消去
+        this.bossBlocks = [];
+        
+        // ボスの周囲に4つブロックを配置
+        const offset = 40;
+        const positions = [
+            { x: this.boss.x - offset, y: this.boss.y + this.boss.height / 2 },
+            { x: this.boss.x + this.boss.width + offset - 60, y: this.boss.y + this.boss.height / 2 },
+            { x: this.boss.x + this.boss.width / 2 - 30, y: this.boss.y - offset },
+            { x: this.boss.x + this.boss.width / 2 - 30, y: this.boss.y + this.boss.height + offset }
+        ];
+
+        for (const pos of positions) {
+            const b = new Brick(pos.x, pos.y, 9999, false, false); // 壊れないブロック
+            b.width = 60;
+            b.height = 20;
+            this.bossBlocks.push(b);
         }
     }
 
@@ -150,6 +250,7 @@ export class LevelManager {
     }
 
     areAllBricksCleared() {
+        if (this.boss) return !this.boss.active;
         const issueBrick = this.bricks.find(b => b.isIssue);
         return issueBrick ? !issueBrick.active : false;
     }

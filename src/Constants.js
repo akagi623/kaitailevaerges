@@ -66,10 +66,20 @@ export const STAGE_CONFIG = {
     },
     [STAGE_ID.SHINJUKU]: {
         name: '新宿: 摩天楼解体エリア',
-        coreHp: 15,
+        coreHp: 1000, // ボスHP
         difficulty: 3,
-        isBossStage: false
+        isBossStage: true
     }
+};
+
+export const BOSS_CONFIG = {
+    HP: 1000,
+    INVINCIBILITY_DURATION: 2000, // 2 seconds
+    WIDTH: 220,
+    HEIGHT: 220,
+    HEAD_WIDTH_RATIO: 0.3,
+    HEAD_HEIGHT_RATIO: 0.2,
+    MOVE_SPEED: 0.05
 };
 
 export const EQUIPMENT_DATA = [
