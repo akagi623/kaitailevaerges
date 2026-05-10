@@ -60,7 +60,7 @@ class Game {
         this.stageBgImages[STAGE_ID.SHINJUKU].src = 'shinjuku.webp';
 
         this.bossImage = new Image();
-        this.bossImage.src = 'gazou/boss_nihei.png';
+        this.bossImage.src = 'boss_nihei.png';
 
         // BGMの設定
         this.bgm = new Audio('BURNING ADRENALINE.mp3');
@@ -491,21 +491,29 @@ class Game {
             this.specialGauge = Math.min(SPECIAL_GAUGE_MAX, this.specialGauge + GAUGE_CHARGE_PER_HIT);
 
             // 火花エフェクト（全てのヒットで発生）
-            this.effectManager.createExplosion(
-                collisionResult.brick.x + collisionResult.brick.width / 2, 
-                collisionResult.brick.y + collisionResult.brick.height / 2
-            );
+            if (collisionResult.isBoss) {
+                this.effectManager.createExplosion(this.ball.x, this.ball.y);
+            } else {
+                this.effectManager.createExplosion(
+                    collisionResult.brick.x + collisionResult.brick.width / 2, 
+                    collisionResult.brick.y + collisionResult.brick.height / 2
+                );
+            }
 
             // 破壊された時のみの処理
             if (collisionResult.destroyed) {
                 this.destroyedBricksCount++; // 破壊数をカウント
                 
                 // 通常の爆発エフェクトに戻す (フリーズ回避のため)
-                this.effectManager.createExplosion(
-                    collisionResult.brick.x + collisionResult.brick.width / 2, 
-                    collisionResult.brick.y + collisionResult.brick.height / 2,
-                    20
-                );
+                if (collisionResult.isBoss) {
+                    this.effectManager.createExplosion(this.ball.x, this.ball.y, 20);
+                } else {
+                    this.effectManager.createExplosion(
+                        collisionResult.brick.x + collisionResult.brick.width / 2, 
+                        collisionResult.brick.y + collisionResult.brick.height / 2,
+                        20
+                    );
+                }
 
                 // EXP獲得
                 const leveledUp = this.player.addExp(10);
@@ -513,11 +521,11 @@ class Game {
                     this.onLevelUp();
                 }
 
-                // アイテム確率ドロップ（重み付きランダム）
+                // アイテム確率ドロップ（重み付きランダム） ※ボス撃破時はボールの位置にドロップ
                 if (Math.random() < MONEY_DROP_RATE) {
                     const itemType = getRandomItemType();
-                    const bx = collisionResult.brick.x + collisionResult.brick.width / 2;
-                    const by = collisionResult.brick.y + collisionResult.brick.height / 2;
+                    const bx = collisionResult.isBoss ? this.ball.x : (collisionResult.brick.x + collisionResult.brick.width / 2);
+                    const by = collisionResult.isBoss ? this.ball.y : (collisionResult.brick.y + collisionResult.brick.height / 2);
                     this.items.push(new Item(bx, by, itemType));
                 }
             }
