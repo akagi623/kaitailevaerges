@@ -154,8 +154,6 @@ export class Boss {
         const distanceSquared = (distanceX * distanceX) + (distanceY * distanceY);
 
         if (distanceSquared < (ballRadius * ballRadius)) {
-            // 当たった！
-            
             // 弱点（頭部）へのヒット判定
             const hitInWeakPoint = (
                 ballX > this.x + this.weakPoint.relX &&
@@ -176,17 +174,22 @@ export class Boss {
     }
 
     hit(damage, isWeakPoint) {
-        if (!this.active || this.invincibilityTimer > 0) return false;
+        if (!this.active) return false;
+
+        // 無敵時間中は何もしない（ダメージなし）
+        // ※ LEVERAGEのリセットは呼び出し元(main.js)で invincible フラグを見て行う
+        if (this.invincibilityTimer > 0) return false;
 
         if (isWeakPoint) {
+            // 頭部に命中: 即座にダメージを与え、その後2秒の無敵時間を付与
             this.hp -= damage;
             this.invincibilityTimer = BOSS_CONFIG.INVINCIBILITY_DURATION;
             if (this.hp <= 0) {
                 this.hp = 0;
                 this.active = false;
             }
-            return true;
+            return true; // ダメージを与えた
         }
-        return false; // 体に当たった場合はダメージなし
+        return false; // 体への攻撃はダメージなし
     }
 }

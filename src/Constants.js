@@ -77,8 +77,8 @@ export const BOSS_CONFIG = {
     INVINCIBILITY_DURATION: 2000, // 2 seconds
     WIDTH: 220,
     HEIGHT: 220,
-    HEAD_WIDTH_RATIO: 0.3,
-    HEAD_HEIGHT_RATIO: 0.2,
+    HEAD_WIDTH_RATIO: 0.6,   // 頭部の幅 (ボス幅の60%: 約132px)
+    HEAD_HEIGHT_RATIO: 0.35, // 頭部の高さ (ボス高さの35%: 約77px)
     MOVE_SPEED: 0.05
 };
 
